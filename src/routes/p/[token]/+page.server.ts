@@ -33,6 +33,8 @@ export const load: PageServerLoad = async ({ params }) => {
 			owedXof: line.owedXof
 		})),
 		hiddenLines: Math.max(0, owed.length - 30),
+		// The debt started with the oldest open line, which may be beyond the 30 shown.
+		oldestOpenAt: owed[0]?.occurredAt ?? null,
 		canPay: shop.walletKind !== 'none',
 		limits: { min: MIN_PAYMENT_XOF, max: MAX_PAYMENT_XOF }
 	};

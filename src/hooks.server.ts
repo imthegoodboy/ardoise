@@ -39,7 +39,7 @@ function pickLocale(
 }
 
 /** Pages behind the shop's PIN. Everything else is public. */
-const PRIVATE = /^\/(app)(\/|$)|^\/api\/entries(\/|$)/;
+const PRIVATE = /^\/(app)(\/|$)|^\/api\/(entries|activity)(\/|$)/;
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const started = performance.now();
@@ -104,6 +104,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 		path.startsWith('/api/')
 	) {
 		headers.set('cache-control', 'private, no-store');
+	}
+	// Pay links and receipts must never show up in a search engine.
+	if (path.startsWith('/p/') || path.startsWith('/r/')) {
+		headers.set('x-robots-tag', 'noindex, nofollow');
 	}
 
 	// Route ids only: a URL can contain a pay token.

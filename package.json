@@ -27,7 +27,6 @@
 		"verify": "npm run lint && npm run check && npm run test && npm run build"
 	},
 	"dependencies": {
-		"@anthropic-ai/sdk": "^1.8.0",
 		"@electric-sql/pglite": "^0.5.16",
 		"@getalby/sdk": "^9.0.0",
 		"@noble/curves": "^2.4.0",

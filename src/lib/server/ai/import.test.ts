@@ -1,91 +1,53 @@
-import type Anthropic from '@anthropic-ai/sdk';
 import { afterEach, describe, expect, it } from 'vitest';
-import { isImportConfigured, readNotebookPage, resolveDate, setAnthropicClient } from './import.ts';
-
-function stub(response: unknown, seen: unknown[] = []): Anthropic {
-	return {
-		beta: {
-			messages: {
-				parse: async (params: unknown) => {
-					seen.push(params);
-					return response;
-				}
-			}
-		}
-	} as unknown as Anthropic;
-}
+import { isImportConfigured, readNotebookPage, resolveDate, setGeminiForTests } from './import.ts';
 
 const image = { data: 'aGVsbG8=', mediaType: 'image/jpeg' as const };
 const today = new Date('2026-11-16T10:00:00Z');
 
-afterEach(() => setAnthropicClient(undefined));
+function gemini(body: unknown, status = 200, seen: { url: string; init: RequestInit }[] = []) {
+	setGeminiForTests({
+		key: 'test-key',
+		fetch: (async (url: string, init: RequestInit) => {
+			seen.push({ url, init });
+			return new Response(JSON.stringify(body), { status });
+		}) as unknown as typeof fetch
+	});
+	return seen;
+}
+
+const answer = (lines: unknown[], finishReason = 'STOP') => ({
+	candidates: [{ content: { parts: [{ text: JSON.stringify({ lines }) }] }, finishReason }]
+});
+
+const line = (customer: string, item: string, amount: number, date: string | null, extra = {}) => ({
+	customer,
+	item,
+	amount_xof: amount,
+	date,
+	kind: 'purchase',
+	crossed_out: false,
+	unsure: false,
+	...extra
+});
+
+afterEach(() => setGeminiForTests(undefined));
 
 describe('notebook import', () => {
-	const hasKey = Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+	const hasKey = Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
 	it.skipIf(hasKey)('is off without credentials', async () => {
 		expect(isImportConfigured()).toBe(false);
 		expect(await readNotebookPage(image, today)).toEqual({ ok: false, error: 'not_configured' });
 	});
 
 	it('turns a transcription into reviewable lines', async () => {
-		const seen: unknown[] = [];
-		setAnthropicClient(
-			stub(
-				{
-					stop_reason: 'end_turn',
-					model: 'claude-opus-5-5',
-					parsed_output: {
-						lines: [
-							{
-								customer: 'Awa',
-								item: 'Riz 5 kg',
-								amount_xof: 2750,
-								date: '12/11',
-								kind: 'purchase',
-								crossed_out: false,
-								unsure: false
-							},
-							{
-								customer: 'Awa',
-								item: 'versement',
-								amount_xof: 2000,
-								date: '14/11',
-								kind: 'payment',
-								crossed_out: false,
-								unsure: false
-							},
-							{
-								customer: 'Modou',
-								item: 'Pain',
-								amount_xof: 150.4,
-								date: '28/12',
-								kind: 'purchase',
-								crossed_out: true,
-								unsure: true
-							},
-							{
-								customer: '  ',
-								item: 'orphan',
-								amount_xof: 500,
-								date: null,
-								kind: 'purchase',
-								crossed_out: false,
-								unsure: false
-							},
-							{
-								customer: 'Total',
-								item: '',
-								amount_xof: 0,
-								date: null,
-								kind: 'purchase',
-								crossed_out: false,
-								unsure: false
-							}
-						]
-					}
-				},
-				seen
-			)
+		const seen = gemini(
+			answer([
+				line('Awa', 'Riz 5 kg', 2750, '12/11'),
+				line('Awa', 'versement', 2000, '14/11', { kind: 'payment' }),
+				line('Modou', 'Pain', 150.4, '28/12', { crossed_out: true, unsure: true }),
+				line('  ', 'orphan', 500, null),
+				line('Total', '', 0, null)
+			])
 		);
 		const result = await readNotebookPage(image, today);
 		expect(result.ok).toBe(true);
@@ -120,27 +82,35 @@ describe('notebook import', () => {
 				unsure: true
 			}
 		]);
-		const params = seen[0] as {
-			model: string;
-			fallbacks: string;
-			messages: { content: { type: string }[] }[];
-		};
-		expect(params.model).toBe('claude-opus-5-5');
-		expect(params.fallbacks).toBe('default');
-		expect(params.messages[0].content[0].type).toBe('image');
+
+		const { url, init } = seen[0];
+		expect(url).toContain('/models/gemini-3.5-flash:generateContent');
+		expect(url).not.toContain('test-key');
+		expect((init.headers as Record<string, string>)['x-goog-api-key']).toBe('test-key');
+		const body = JSON.parse(String(init.body));
+		expect(body.contents[0].parts[0].inlineData.mimeType).toBe('image/jpeg');
+		expect(body.generationConfig.responseMimeType).toBe('application/json');
 	});
 
-	it('reports a refusal instead of an empty page', async () => {
-		setAnthropicClient(
-			stub({ stop_reason: 'refusal', stop_details: { category: null }, parsed_output: null })
-		);
+	it('reports a safety block instead of an empty page', async () => {
+		gemini({ promptFeedback: { blockReason: 'SAFETY' } });
+		expect(await readNotebookPage(image, today)).toEqual({ ok: false, error: 'refused' });
+		gemini(answer([], 'PROHIBITED_CONTENT'));
 		expect(await readNotebookPage(image, today)).toEqual({ ok: false, error: 'refused' });
 	});
 
-	it('survives an API failure', async () => {
-		setAnthropicClient({
-			beta: { messages: { parse: async () => Promise.reject(new Error('socket hang up')) } }
-		} as unknown as Anthropic);
+	it('rejects output that does not match the schema', async () => {
+		gemini({ candidates: [{ content: { parts: [{ text: '{"lines":[{"customer":1}]}' }] } }] });
+		expect(await readNotebookPage(image, today)).toEqual({ ok: false, error: 'failed' });
+	});
+
+	it('treats a rejected key as not configured, and survives outages', async () => {
+		gemini({ error: { message: 'API key not valid' } }, 403);
+		expect(await readNotebookPage(image, today)).toEqual({ ok: false, error: 'not_configured' });
+		setGeminiForTests({
+			key: 'test-key',
+			fetch: (() => Promise.reject(new Error('socket hang up'))) as unknown as typeof fetch
+		});
 		expect(await readNotebookPage(image, today)).toEqual({ ok: false, error: 'failed' });
 	});
 

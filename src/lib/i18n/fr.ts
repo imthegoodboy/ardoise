@@ -27,129 +27,82 @@ export const fr = {
 	'common.notFound': 'Page introuvable',
 	'common.home': 'Accueil',
 
+	'toast.paidBy': '{payer} a payé {amount}',
+	'toast.paid': '{amount} reçus en Lightning',
+	'toast.for': 'pour l’ardoise de {name}',
+
 	'home.title': 'Le crédit de la boutique, réglé par la famille, où qu’elle soit.',
 	'home.lead':
-		'Notez les achats à crédit en deux touches. Envoyez l’ardoise par WhatsApp. Un proche à Paris, Milan ou New York la règle en Bitcoin Lightning, et les lignes se barrent toutes seules.',
+		'Notez le crédit. Envoyez l’ardoise sur WhatsApp. La famille règle en Bitcoin Lightning.',
 	'home.cta': 'Ouvrir mon cahier',
 	'home.continue': 'Continuer vers mon cahier',
 	'home.demo': 'Essayer la démo',
-	'home.demoHint': 'Une boutique d’exemple, privée, rien à installer.',
-	'home.how': 'Comment ça marche',
-	'home.step1.title': 'Notez le crédit',
-	'home.step1.body':
-		'Un client prend du riz et de l’huile ? Deux touches et c’est noté, même sans réseau.',
-	'home.step2.title': 'Envoyez l’ardoise',
-	'home.step2.body':
-		'Chaque client a son lien. Envoyez-le par WhatsApp, à lui ou à sa famille à l’étranger.',
-	'home.step3.title': 'La famille règle',
-	'home.step3.body':
-		'Le paiement arrive dans votre portefeuille Lightning en quelques secondes, pour quelques francs de frais. Les lignes payées se barrent.',
-	'home.trust.title': 'Votre argent reste à vous',
-	'home.trust.custody':
-		'Ardoise ne garde jamais les fonds. Il crée des factures pour votre portefeuille et ne peut rien dépenser : il refuse même les connexions qui le pourraient.',
-	'home.trust.proof':
-		'Chaque paiement a un reçu avec une preuve cryptographique que n’importe qui peut vérifier.',
-	'home.trust.light':
-		'Fait pour un petit téléphone et une connexion lente. Les achats notés hors ligne partent dès que le réseau revient.',
 	'home.sample.shop': 'Boutique Diallo · Médina',
 	'home.sample.customer': 'Awa Ndiaye',
 	'home.sample.rice': 'Riz 5 kg',
 	'home.sample.oil': 'Huile 1 L',
 	'home.sample.sugar': 'Sucre 1 kg',
 	'home.sample.paid': 'Payé par Moussa, Paris',
-	'home.footer': 'Logiciel libre (licence MIT), construit pour le Dakar Bitcoin Hack 2026.',
+	'home.footer': 'Construit pour le Dakar Bitcoin Hack 2026.',
 	'home.source': 'Code source',
-	'home.strip.open': 'Code ouvert (MIT)',
-	'home.strip.free': 'Gratuit pour la boutique',
+	'home.footer.product': 'Produit',
+	'home.footer.tech': 'Construit avec',
+	'home.footer.project': 'Projet',
+	'home.footer.licence': 'Licence MIT',
+	'home.footer.note': 'Ardoise ne détient jamais votre argent.',
+	'home.toast': '{amount} reçus · Paris',
+	'home.strip.open': 'Code ouvert',
+	'home.strip.free': 'Gratuit',
 	'home.strip.custody': 'Vos sats, votre portefeuille',
-	'home.problem.kicker': 'Le problème',
-	'home.problem.title': 'Dans chaque boutique de quartier, il y a un cahier.',
-	'home.problem.body1':
-		'Le riz, l’huile, le pain du matin : une bonne part se prend à crédit et s’écrit au stylo. Le boutiquier avance un argent qu’il n’a pas toujours, et attend la fin du mois.',
-	'home.problem.body2':
-		'Pendant ce temps, la famille à l’étranger envoie de l’argent par agence ou par transfert mobile. Il paie des frais à chaque étape, et n’arrive pas toujours jusqu’à l’ardoise.',
+	'home.problem.kicker': 'Pourquoi',
+	'home.problem.title': 'Chaque boutique tient un cahier de crédit.',
 	'home.stat.remit.value': '≈ 11 %',
-	'home.stat.remit.label': 'du PIB du Sénégal vient des envois d’argent de la diaspora (2024).',
+	'home.stat.remit.label': 'du PIB du Sénégal vient de la diaspora',
 	'home.stat.cost.value': '8,5 %',
-	'home.stat.cost.label':
-		'de frais en moyenne pour envoyer 200 $ vers l’Afrique subsaharienne, la région la plus chère du monde (2025).',
-	'home.stat.goal.value': '3 %',
-	'home.stat.goal.label':
-		'c’est l’objectif des Nations unies pour 2030. Sur Lightning, les frais de réseau sont en général bien en dessous de 1 %.',
-	'home.stat.source':
-		'Sources : Banque mondiale, Indicateurs du développement dans le monde (2024) et Remittance Prices Worldwide (T3 2025).',
-	'home.flow.kicker': 'En pratique',
-	'home.flow.title': 'De la Médina à Paris, et retour, en une minute.',
-	'home.flow.shop.title': 'À la boutique',
-	'home.flow.shop.body': 'Mamadou note les courses d’Awa. Son ardoise affiche 4 700 F.',
-	'home.flow.chat.title': 'Sur WhatsApp',
-	'home.flow.chat.body': 'Il envoie le lien de l’ardoise à Moussa, le fils d’Awa, qui vit à Paris.',
+	'home.stat.cost.label': 'de frais pour envoyer 200 $ en Afrique subsaharienne',
+	'home.stat.goal.value': '< 1 %',
+	'home.stat.goal.label': 'de frais de réseau, en général, sur Lightning',
+	'home.stat.source': 'Source : Banque mondiale (2024 ; T3 2025).',
+	'home.flow.kicker': 'Comment ça marche',
+	'home.flow.title': 'De Dakar à Paris en une minute.',
+	'home.flow.shop.title': 'La boutique note',
+	'home.flow.shop.body': 'Deux touches par achat, même hors ligne.',
+	'home.flow.chat.title': 'Le lien part sur WhatsApp',
+	'home.flow.chat.body': 'Au client, ou à sa famille à l’étranger.',
 	'home.flow.chat.message':
-		'Bonjour, voici l’ardoise d’Awa chez Boutique Diallo : 4 700 FCFA. Vous pouvez la régler ici :',
-	'home.flow.pay.title': 'À Paris',
-	'home.flow.pay.body':
-		'Moussa voit le détail et paie 7,17 € en sats. La boutique reçoit, les lignes se barrent, un reçu vérifiable est créé.',
+		'Bonjour, voici l’ardoise d’Awa chez Boutique Diallo : 4 700 FCFA. Pour la régler :',
+	'home.flow.pay.title': 'La famille paie',
+	'home.flow.pay.body': '{eur} en sats. Les lignes se barrent.',
 	'home.flow.pay.done': 'Payé. Merci !',
-	'home.compare.title': 'Ce qui change',
-	'home.compare.before': 'Avant',
-	'home.compare.after': 'Avec Ardoise',
-	'home.compare.1.before':
-		'Des dettes dans un cahier qui peut se perdre, se mouiller, se déchirer.',
-	'home.compare.1.after': 'Chaque ardoise à jour sur le téléphone, sauvegardée, exportable.',
-	'home.compare.2.before': 'Relancer les clients de vive voix, avec gêne.',
-	'home.compare.2.after': 'Un message WhatsApp poli, avec le détail et un lien pour payer.',
-	'home.compare.3.before':
-		'L’argent de la famille passe par une agence, avec des frais, et sert parfois à autre chose.',
-	'home.compare.3.after':
-		'La famille règle l’ardoise elle-même et voit exactement ce qu’elle paie, ligne par ligne.',
-	'home.compare.4.before': '« J’ai déjà payé ! » : parole contre parole.',
-	'home.compare.4.after':
-		'Un reçu avec une preuve cryptographique que tout le monde peut vérifier.',
 	'home.features.kicker': 'Sous le capot',
-	'home.features.title': 'Pensé pour durer, et pour être vérifié',
+	'home.features.title': 'Sûr par conception',
 	'home.feature.nwc.title': 'Recevoir seulement',
-	'home.feature.nwc.body':
-		'La connexion Nostr Wallet Connect se limite à créer et consulter des factures. Une clé qui peut dépenser est refusée : c’est testé à la connexion, pas supposé.',
+	'home.feature.nwc.body': 'Les connexions NWC qui peuvent dépenser sont refusées.',
 	'home.feature.proof.title': 'Preuve de paiement',
-	'home.feature.proof.body':
-		'Chaque reçu montre la preimage Lightning. Le navigateur vérifie lui-même que SHA-256(preimage) = payment hash.',
-	'home.feature.rate.title': 'Un cours honnête',
-	'home.feature.rate.body':
-		'Médiane de quatre places de marché, utilisée seulement si au moins deux sont d’accord à 3 % près. Le franc CFA est arrimé à l’euro : 655,957 F = 1 €.',
-	'home.feature.offline.title': 'Hors ligne d’abord',
-	'home.feature.offline.body':
-		'Les achats notés sans réseau attendent sur le téléphone et partent au retour de la connexion, sans jamais être comptés deux fois.',
-	'home.feature.import.title': 'Le cahier papier en photo',
-	'home.feature.import.body':
-		'Claude lit une page du vieux cahier ; le boutiquier vérifie chaque ligne avant qu’elle n’entre dans Ardoise.',
-	'home.feature.privacy.title': 'Données chiffrées',
-	'home.feature.privacy.body':
-		'Noms et numéros des clients chiffrés au repos (AES-256-GCM), numéro du boutiquier gardé en empreinte, aucune donnée personnelle dans les journaux.',
-	'home.rate.label': 'En ce moment',
-	'home.rate.value': '1 000 F = {sats} sats',
-	'home.rate.sources': 'cours médian {sources}',
-	'home.faq.title': 'Questions fréquentes',
-	'home.faq.1.q': 'Faut-il comprendre le bitcoin pour utiliser Ardoise ?',
+	'home.feature.proof.body': 'Chaque reçu se vérifie dans le navigateur.',
+	'home.feature.rate.title': 'Cours honnête',
+	'home.feature.rate.body': 'Médiane de quatre places de marché.',
+	'home.feature.offline.title': 'Hors ligne',
+	'home.feature.offline.body': 'Les achats partent au retour du réseau.',
+	'home.feature.import.title': 'Import photo',
+	'home.feature.import.body': 'Gemini lit le vieux cahier papier.',
+	'home.feature.privacy.title': 'Chiffré',
+	'home.feature.privacy.body': 'Noms et numéros chiffrés au repos.',
+	'home.rate.label': 'En direct',
+	'home.rate.value': '{amount} = {sats}',
+	'home.rate.sources': 'médiane {sources}',
+	'home.faq.title': 'Questions',
+	'home.faq.1.q': 'Faut-il comprendre le bitcoin ?',
 	'home.faq.1.a':
-		'Non. Le boutiquier travaille en francs CFA, comme dans son cahier. Le bitcoin sert de tuyau pour que l’argent arrive vite, sans intermédiaire.',
+		'Non. La boutique compte en francs CFA ; le bitcoin ne sert qu’à faire voyager l’argent.',
 	'home.faq.2.q': 'Et si la famille n’a pas de bitcoin ?',
 	'home.faq.2.a':
-		'Selon le pays, des applications comme Strike, Cash App, Wallet of Satoshi ou Blink permettent de payer une facture Lightning à partir d’un solde en euros ou en dollars.',
-	'home.faq.3.q': 'Et si le cours du bitcoin bouge ?',
-	'home.faq.3.a':
-		'Le montant en sats est calculé au moment de payer et reste fixe pendant 15 minutes. La boutique reçoit des sats ; elle peut les garder ou les convertir en francs avec le service de son choix.',
-	'home.faq.4.q': 'Ardoise peut-il toucher à mon argent ?',
-	'home.faq.4.a':
-		'Non. L’argent va directement dans votre portefeuille. Ardoise ne garde qu’une connexion qui sait créer et vérifier des factures, et refuse celles qui pourraient dépenser.',
-	'home.faq.5.q': 'Et sans internet ?',
-	'home.faq.5.a':
-		'Vous consultez les ardoises et notez les achats ; tout part au retour du réseau. Seul le paiement en ligne a besoin de connexion, côté famille.',
-	'home.faq.6.q': 'Combien ça coûte ?',
-	'home.faq.6.a':
-		'Ardoise est un logiciel libre, que l’on peut héberger soi-même avec une seule commande Docker. Les seuls frais sont ceux du réseau Lightning.',
+		'Selon le pays, Strike, Cash App, Wallet of Satoshi ou Blink paient une facture Lightning depuis des euros ou des dollars.',
+	'home.faq.3.q': 'Ardoise peut-il toucher à mon argent ?',
+	'home.faq.3.a': 'Non. Le paiement arrive directement dans votre portefeuille.',
+	'home.faq.4.q': 'Combien ça coûte ?',
+	'home.faq.4.a': 'Rien. Ardoise est libre ; seuls les frais du réseau Lightning s’appliquent.',
 	'home.final.title': 'Ouvrez votre cahier en une minute.',
-	'home.final.body':
-		'Un numéro de téléphone, un code à six chiffres. Le portefeuille se branche quand vous êtes prêt.',
 
 	'signup.title': 'Ouvrez le cahier de votre boutique',
 	'signup.shop': 'Nom de la boutique',
@@ -186,7 +139,7 @@ export const fr = {
 	'book.owed': 'On vous doit',
 	'book.customersOwing.one': '1 client doit de l’argent',
 	'book.customersOwing.other': '{n} clients doivent de l’argent',
-	'book.lightning30d': 'Reçu en Lightning, 30 jours',
+	'book.lightning30d': 'Reçu en Lightning, 30 jours :',
 	'book.search': 'Chercher un client',
 	'book.newCustomer': 'Nouveau client',
 	'book.empty.title': 'Votre cahier est vide',
@@ -377,15 +330,16 @@ export const fr = {
 	'import.add.other': 'Ajouter {n} lignes au cahier',
 	'import.added': '{n} ligne(s) ajoutée(s) au cahier.',
 	'import.notConfigured':
-		'La lecture automatique n’est pas activée sur ce serveur (clé API Anthropic absente).',
+		'La lecture automatique n’est pas activée sur ce serveur (clé API Gemini absente).',
 	'import.failed':
 		'Impossible de lire cette photo. Essayez avec plus de lumière, la page bien à plat.',
 	'import.nothing': 'Aucune ligne trouvée sur cette photo.',
 	'import.privacy':
-		'La photo est envoyée à Claude (Anthropic) pour être lue, puis oubliée. Ardoise ne la conserve pas.',
+		'La photo est envoyée à Google Gemini pour être lue, puis oubliée. Ardoise ne la conserve pas.',
 	'import.uncertain': 'à vérifier',
 	'import.tooBig': 'Photo trop lourde. Réessayez.',
 	'import.another': 'Importer une autre page',
+	'import.saveFailed': 'Ces lignes n’ont pas pu être ajoutées. Vérifiez les montants et réessayez.',
 
 	'pay.title': 'L’ardoise de {name}',
 	'pay.at': 'chez {shop}',
@@ -395,6 +349,7 @@ export const fr = {
 	'pay.items': 'Le détail',
 	'pay.partial': 'reste {amount}',
 	'pay.amount': 'Montant à payer',
+	'pay.all': 'Tout',
 	'pay.amountHint': 'Vous pouvez payer une partie seulement.',
 	'pay.name': 'Votre prénom',
 	'pay.nameHint': 'Pour que la boutique sache qui a payé.',
@@ -459,7 +414,7 @@ export const fr = {
 	'receipt.explain':
 		'En Lightning, le portefeuille qui est payé révèle un secret, la preimage. Son empreinte SHA-256 est inscrite dans la facture d’origine. Votre navigateur refait le calcul lui-même : pas besoin de croire Ardoise sur parole.',
 	'receipt.print': 'Imprimer',
-	'receipt.demo': 'Reçu de démonstration (réseau de test)',
+	'receipt.demo': 'Reçu de démonstration : paiement en sats de test.',
 	'receipt.notPaid': 'Ce paiement n’est pas encore confirmé.',
 	'receipt.network': 'Réseau'
 } satisfies Record<string, string>;

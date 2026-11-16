@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { fail } from '@sveltejs/kit';
 import * as z from 'zod';
 import { MAX_ENTRY_XOF } from '#lib/money.ts';
@@ -26,6 +25,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 const SavedLines = z
 	.array(
 		z.object({
+			id: z.uuid(),
 			customer: z.string(),
 			item: z.string(),
 			amountXof: z.number().int().min(1).max(MAX_ENTRY_XOF),
@@ -87,7 +87,7 @@ export const actions: Actions = {
 				const result = await addEntry(
 					shop.id,
 					{
-						id: randomUUID(),
+						id: line.id,
 						customerId,
 						kind: line.kind,
 						amountXof: line.amountXof,

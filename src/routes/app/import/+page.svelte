@@ -4,12 +4,15 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import { makeT, plural } from '#lib/i18n/index.ts';
 	import { formatXof, parseAmount } from '#lib/money.ts';
+	import { uuid } from '#lib/uuid.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 	const t = $derived(makeT(data.locale));
 
 	interface Row {
+		/** Made once when the page is read: saving twice can never add a line twice. */
+		id: string;
 		keep: boolean;
 		customer: string;
 		item: string;
@@ -23,6 +26,8 @@
 	let reading = $state(false);
 	let readError = $state('');
 	let added = $state<number | null>(null);
+	let saving = $state(false);
+	let saveError = $state(false);
 
 	const known = $derived(new Set(data.names.map((name) => name.toLowerCase())));
 	const kept = $derived(
@@ -31,6 +36,7 @@
 	const payload = $derived(
 		JSON.stringify(
 			kept.map((row) => ({
+				id: row.id,
 				customer: row.customer.trim(),
 				item: row.item.trim(),
 				amountXof: parseAmount(row.amount),
@@ -50,6 +56,7 @@
 
 	/** Phone photos are 3-12 MB; 1600 px is plenty to read handwriting and ~10x lighter to send. */
 	async function shrink(file: Blob): Promise<Blob> {
+		if (typeof createImageBitmap !== 'function') return file;
 		try {
 			const bitmap = await createImageBitmap(file);
 			const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
@@ -77,7 +84,9 @@
 		rows = [];
 		try {
 			const body = new FormData();
-			body.set('photo', new File([await shrink(file)], 'page.jpg', { type: 'image/jpeg' }));
+			const small = await shrink(file);
+			// If shrinking was not possible, send the original with its real type.
+			body.set('photo', new File([small], 'page', { type: small.type || 'image/jpeg' }));
 			const response = await fetch('?/read', {
 				method: 'POST',
 				body,
@@ -94,6 +103,7 @@
 						}
 					>
 				).map((line) => ({
+					id: uuid(),
 					keep: !line.crossedOut,
 					customer: line.customer,
 					item: line.item,
@@ -222,19 +232,28 @@
 		<form
 			method="POST"
 			action="?/save"
-			use:enhance={() =>
-				async ({ result, update }) => {
+			use:enhance={({ cancel }) => {
+				if (saving) return cancel();
+				saving = true;
+				saveError = false;
+				return async ({ result, update }) => {
+					saving = false;
 					if (result.type === 'success') {
 						added = Number(result.data?.added ?? 0);
 						rows = [];
 						await invalidateAll();
 					} else {
-						await update();
+						saveError = true;
+						await update({ reset: false });
 					}
-				}}
+				};
+			}}
 		>
+			{#if saveError}
+				<p class="note note-error" role="alert">{t('import.saveFailed')}</p>
+			{/if}
 			<input type="hidden" name="lines" value={payload} />
-			<button class="btn btn-wide" disabled={kept.length === 0}>
+			<button class="btn btn-wide" disabled={kept.length === 0} aria-busy={saving}>
 				{plural(t, kept.length, 'import.add.one', 'import.add.other')}
 				· {formatXof(
 					kept.reduce((sum, row) => sum + (parseAmount(row.amount) ?? 0), 0),

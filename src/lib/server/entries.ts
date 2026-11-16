@@ -59,7 +59,7 @@ export async function addEntry(
 		`insert into entries (id, shop_id, customer_id, kind, amount_xof, label, occurred_at)
 		 select $1::uuid, c.shop_id, c.id, $4::text, $5::int, $6::text, $7::timestamptz
 		 from customers c
-		 where c.id = $3::uuid and c.shop_id = $2::uuid
+		 where c.id = $3::uuid and c.shop_id = $2::uuid and c.archived_at is null
 		 on conflict (id) do nothing
 		 returning id`,
 		[
@@ -87,15 +87,16 @@ export async function addEntry(
  */
 export async function setVoided(
 	shopId: string,
+	customerId: string,
 	entryId: string,
 	voided: boolean
 ): Promise<boolean> {
 	const db = await getDb();
 	const rows = await db.query(
 		`update entries set voided_at = case when $3 then now() else null end
-		 where id = $1 and shop_id = $2 and kind <> 'payment_lightning'
+		 where id = $1 and shop_id = $2 and customer_id = $4 and kind <> 'payment_lightning'
 		 returning id`,
-		[entryId, shopId, voided]
+		[entryId, shopId, voided, customerId]
 	);
 	return rows.length > 0;
 }
@@ -221,5 +222,46 @@ export async function exportEntries(shopId: string): Promise<
 		label: row.label,
 		occurredAt: row.occurred_at,
 		voided: row.voided_at !== null
+	}));
+}
+
+export interface RecentPayment {
+	entryId: string;
+	customerId: string;
+	customerName: string;
+	amountXof: number;
+	payerName: string | null;
+	receiptId: string | null;
+	at: string;
+}
+
+/** Lightning payments written after `since`: what the shop app announces as they land. */
+export async function recentLightningPayments(
+	shopId: string,
+	since: Date,
+	limit = 5
+): Promise<RecentPayment[]> {
+	const db = await getDb();
+	const rows = await db.query(
+		`select e.id, e.customer_id, e.amount_xof, e.created_at, e.invoice_id,
+		        c.name_sealed, i.public_id, i.payer_name_sealed
+		 from entries e
+		 join customers c on c.id = e.customer_id
+		 left join invoices i on i.id = e.invoice_id
+		 where e.shop_id = $1 and e.kind = 'payment_lightning' and e.created_at > $2::timestamptz
+		 order by e.created_at desc
+		 limit $3`,
+		[shopId, since.toISOString(), limit]
+	);
+	return rows.map((row) => ({
+		entryId: row.id,
+		customerId: row.customer_id,
+		customerName: open(row.name_sealed, 'customers.name:' + row.customer_id),
+		amountXof: row.amount_xof,
+		payerName: row.payer_name_sealed
+			? open(row.payer_name_sealed, 'invoices.payer:' + row.invoice_id)
+			: null,
+		receiptId: row.public_id ?? null,
+		at: (row.created_at as Date).toISOString()
 	}));
 }

@@ -16,8 +16,10 @@ const PATTERNS: [RegExp, string][] = [
 	[/\b(secret|token|pin|preimage|password)=[^&\s"]+/gi, '$1=[redacted]'],
 	[/\blni?(bc|tb|bcrt)[0-9a-z]{20,}/gi, '[invoice]'],
 	[/\bsk-ant-[\w-]+/g, '[api-key]'],
-	[/\+?\d[\d\s().-]{7,}\d/g, '[number]'],
-	[/\b[0-9a-f]{64}\b/gi, '[hex64]']
+	[/\bAIza[\w-]{30,}/g, '[api-key]'],
+	[/\bAQ\.[\w-]{20,}/g, '[api-key]'],
+	[/\b[0-9a-f]{64}\b/gi, '[hex64]'],
+	[/\+?\d[\d\s().-]{7,}\d/g, '[number]']
 ];
 
 export function scrub(text: string): string {

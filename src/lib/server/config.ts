@@ -39,12 +39,13 @@ export const config = {
 	demo: demoMode(env.ARDOISE_DEMO),
 	/** Optional real wallet for the hosted demo shop (receive-only NWC connection). */
 	demoShopNwcUrl: env.ARDOISE_DEMO_NWC_URL || '',
-	/** Test-only escape hatch: accept NWC connections that are allowed to spend. */
-	allowSpendCapableNwc: flag(env.ARDOISE_ALLOW_SPEND_CAPABLE_NWC),
+	/** Test-only escape hatch: accept NWC connections that are allowed to spend. Never in production. */
+	allowSpendCapableNwc: flag(env.ARDOISE_ALLOW_SPEND_CAPABLE_NWC) && env.NODE_ENV !== 'production',
 	/** Allow wallet relays on private networks, e.g. a node on your LAN. Off unless asked for. */
 	allowPrivateHosts: flag(env.ARDOISE_ALLOW_PRIVATE_HOSTS),
-	anthropicApiKey: env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN || '',
-	aiModel: env.ARDOISE_AI_MODEL || 'claude-opus-5-5',
+	/** Google Gemini API key, for reading photos of paper notebooks. */
+	geminiApiKey: env.GEMINI_API_KEY || env.GOOGLE_API_KEY || '',
+	aiModel: env.ARDOISE_AI_MODEL || 'gemini-3.5-flash',
 	cronSecret: env.CRON_SECRET || '',
 	logLevel: env.LOG_LEVEL || (env.VITEST ? 'silent' : 'info')
 } as const;
@@ -68,6 +69,12 @@ export function masterSecret(): string {
 		}
 		cachedSecret = fromEnv;
 		return cachedSecret;
+	}
+
+	// With an external database, a key file on a container's disk would vanish on
+	// the next deploy and take every sealed value with it. Refuse to start instead.
+	if (config.isProduction && config.databaseUrl) {
+		throw new Error('ARDOISE_SECRET must be set in production when DATABASE_URL is used.');
 	}
 
 	if (config.isTest) {

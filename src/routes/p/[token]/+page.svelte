@@ -22,7 +22,21 @@
 	);
 	let busy = $state(false);
 
-	const oldest = $derived(data.lines[0]?.occurredAt);
+	const oldest = $derived(data.oldestOpenAt);
+	const dueLine = $derived(
+		[`≈ ${eur(due)}`, oldest ? t('pay.since', { date: longDate(oldest, data.locale) }) : '']
+			.filter(Boolean)
+			.join(' · ')
+	);
+	const amountHint = $derived(
+		[amount ? `≈ ${eur(amount)}` : '', t('pay.amountHint')].filter(Boolean).join(' · ')
+	);
+	// One tap for the usual choices: everything, or a round part of it.
+	const choices = $derived(
+		due >= data.limits.min
+			? [due, ...[10_000, 5_000, 2_000].filter((value) => value < due)].slice(0, 4)
+			: [5_000, 2_000, 1_000]
+	);
 
 	function errorText(code: string): string {
 		if (code === 'amount') {
@@ -44,10 +58,7 @@
 		{#if due > 0}
 			<p class="label">{t('pay.due')}</p>
 			<p class="amount num">{money(due)}</p>
-			<p class="small muted">
-				≈ {eur(due)}{#if oldest}
-					· {t('pay.since', { date: longDate(oldest, data.locale) })}{/if}
-			</p>
+			<p class="small muted">{dueLine}</p>
 		{:else}
 			<p class="nothing"><Icon name="check" size={28} /> {t('pay.nothingDue')}</p>
 			{#if data.balanceXof < 0}
@@ -57,7 +68,7 @@
 	</section>
 
 	{#if data.lines.length}
-		<details class="items" open={data.lines.length <= 6}>
+		<details class="items" open>
 			<summary>{t('pay.items')} ({data.lines.length + data.hiddenLines})</summary>
 			<ol class="ledger">
 				{#each data.lines as line (line.id)}
@@ -107,10 +118,20 @@
 					/>
 					<span class="unit">F</span>
 				</div>
-				<span class="hint" id="amount-hint">
-					{#if amount}≈ {eur(amount)} ·
-					{/if}{t('pay.amountHint')}
-				</span>
+				<span class="hint" id="amount-hint">{amountHint}</span>
+				<div class="choices" role="group" aria-label={t('pay.amount')}>
+					{#each choices as choice, i (choice)}
+						<button
+							type="button"
+							class="chip"
+							class:active={amount === choice}
+							aria-pressed={amount === choice}
+							onclick={() => (amountText = String(choice))}
+						>
+							{i === 0 && choice === due ? `${t('pay.all')} · ` : ''}{money(choice)}
+						</button>
+					{/each}
+				</div>
 			</div>
 
 			<div class="field">
@@ -183,6 +204,31 @@
 
 	.pay {
 		padding-block-start: var(--s-2);
+	}
+
+	.choices {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--s-2);
+		margin-block-start: var(--s-3);
+	}
+
+	.chip {
+		min-height: 2.75rem;
+		padding: 0.5rem 0.9rem;
+		border: 1.5px solid var(--rule-strong);
+		border-radius: 999px;
+		background: var(--paper);
+		font-size: var(--t-small);
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+		cursor: pointer;
+		touch-action: manipulation;
+	}
+
+	.chip.active {
+		background: var(--peel);
+		border-color: var(--orange);
 	}
 
 	.pay-btn {

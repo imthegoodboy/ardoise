@@ -133,7 +133,7 @@
 				<h1>{t('invoice.title')}</h1>
 				<p class="amount num">{money(invoice.amountXof)}</p>
 				<p class="small muted">
-					{formatSats(invoice.amountSats, data.locale)} sats · ≈ {formatEur(
+					{formatSats(invoice.amountSats, data.locale)} · ≈ {formatEur(
 						xofToEurCents(invoice.amountXof),
 						data.locale
 					)}

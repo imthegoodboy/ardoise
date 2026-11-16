@@ -38,7 +38,7 @@
 		{#if data.totals.lightningCount30d}
 			<p class="ln small">
 				<Icon name="bolt" size={16} />
-				{t('book.lightning30d')} : <strong class="num">{money(data.totals.lightningXof30d)}</strong>
+				{t('book.lightning30d')} <strong class="num">{money(data.totals.lightningXof30d)}</strong>
 			</p>
 		{/if}
 	</section>
@@ -69,7 +69,7 @@
 				enterkeyhint="search"
 			/>
 		</label>
-		<a class="btn" href="/app/customers/new">
+		<a class="btn" href="/app/customers/new" aria-label={t('book.newCustomer')}>
 			<Icon name="plus" />
 			<span class="new-label">{t('book.newCustomer')}</span>
 		</a>

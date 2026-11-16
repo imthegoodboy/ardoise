@@ -3,12 +3,23 @@
 	import LangSwitch from '#lib/components/LangSwitch.svelte';
 	import Wordmark from '#lib/components/Wordmark.svelte';
 	import { makeT, type MessageKey } from '#lib/i18n/index.ts';
-	import { formatNumber, formatXof } from '#lib/money.ts';
+	import { formatEur, formatSats, formatXof, xofToEurCents } from '#lib/money.ts';
+	import { reveal } from '#lib/reveal.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 	const t = $derived(makeT(data.locale));
 	const money = (amount: number) => formatXof(amount, data.locale);
+	const k = (key: string) => key as MessageKey;
+
+	// The story's numbers: Awa's three purchases, paid from Paris.
+	const TAB = [
+		{ key: 'home.sample.rice', when: '03/11', amount: 2750 },
+		{ key: 'home.sample.oil', when: '07/11', amount: 1300 },
+		{ key: 'home.sample.sugar', when: '12/11', amount: 650 }
+	];
+	const TOTAL = TAB.reduce((sum, line) => sum + line.amount, 0);
+	const totalEur = $derived(formatEur(xofToEurCents(TOTAL), data.locale));
 
 	const features: { icon: IconName; key: string }[] = [
 		{ icon: 'shield', key: 'nwc' },
@@ -18,10 +29,10 @@
 		{ icon: 'camera', key: 'import' },
 		{ icon: 'book', key: 'privacy' }
 	];
-	const k = (key: string) => key as MessageKey;
 	const sources = $derived(
 		data.rate?.sources.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(', ') ?? ''
 	);
+	const year = new Date().getUTCFullYear();
 </script>
 
 <svelte:head>
@@ -46,9 +57,9 @@
 	<section class="hero">
 		<div class="wide hero-grid">
 			<div class="stack hero-copy" style:--stack="var(--s-5)">
-				<h1>{t('home.title')}</h1>
-				<p class="lead">{t('home.lead')}</p>
-				<div class="ctas">
+				<h1 class="rise" style:--d="0ms">{t('home.title')}</h1>
+				<p class="lead rise" style:--d="120ms">{t('home.lead')}</p>
+				<div class="ctas rise" style:--d="240ms">
 					{#if data.signedIn}
 						<a class="btn" href="/app">{t('home.continue')}</a>
 					{:else}
@@ -60,63 +71,59 @@
 						</form>
 					{/if}
 				</div>
-				<ul class="strip">
+				<ul class="strip rise" style:--d="360ms">
 					<li><Icon name="check" size={16} /> {t('home.strip.custody')}</li>
 					<li><Icon name="check" size={16} /> {t('home.strip.free')}</li>
 					<li><Icon name="check" size={16} /> {t('home.strip.open')}</li>
 				</ul>
 			</div>
 
-			<figure class="sheet-art" aria-label={t('home.sample.customer')}>
-				<figcaption>
-					<span class="meta">{t('home.sample.shop')}</span>
-					<strong>{t('home.sample.customer')}</strong>
-				</figcaption>
-				<ol class="ledger">
-					<li class="settled just-settled" style:--i="0">
-						<span class="when">03/11</span><span class="what">{t('home.sample.rice')}</span><span
-							class="sum">{money(2750)}</span
-						>
-					</li>
-					<li class="settled just-settled" style:--i="1">
-						<span class="when">07/11</span><span class="what">{t('home.sample.oil')}</span><span
-							class="sum">{money(1300)}</span
-						>
-					</li>
-					<li class="settled just-settled" style:--i="2">
-						<span class="when">12/11</span><span class="what">{t('home.sample.sugar')}</span><span
-							class="sum">{money(650)}</span
-						>
-					</li>
-					<li class="payment arrive">
-						<span class="when">16/11</span><span class="what"
-							><Icon name="bolt" size={15} /> {t('home.sample.paid')}</span
-						><span class="sum">−{money(4700)}</span>
-					</li>
-				</ol>
-				<p class="balance"><span>{t('tab.settled')}</span> <Icon name="check" size={20} /></p>
-			</figure>
+			<div class="art">
+				<p class="toast" aria-hidden="true">
+					<span class="toast-bolt"><Icon name="bolt" size={16} /></span>
+					{t('home.toast', { amount: money(TOTAL) })}
+				</p>
+				<figure class="sheet-art" aria-label={t('home.sample.customer')}>
+					<figcaption>
+						<span class="meta">{t('home.sample.shop')}</span>
+						<strong>{t('home.sample.customer')}</strong>
+					</figcaption>
+					<ol class="ledger">
+						{#each TAB as line, i (line.key)}
+							<li class="settled just-settled" style:--i={i}>
+								<span class="when">{line.when}</span><span class="what">{t(k(line.key))}</span><span
+									class="sum">{money(line.amount)}</span
+								>
+							</li>
+						{/each}
+						<li class="payment arrive">
+							<span class="when">16/11</span><span class="what"
+								><Icon name="bolt" size={15} /> {t('home.sample.paid')}</span
+							><span class="sum">−{money(TOTAL)}</span>
+						</li>
+					</ol>
+					<p class="balance"><span>{t('tab.settled')}</span> <Icon name="check" size={20} /></p>
+				</figure>
+			</div>
 		</div>
 	</section>
 
 	<!-- 2. Why it matters -->
 	<section class="wide problem" aria-labelledby="problem">
-		<p class="kicker">{t('home.problem.kicker')}</p>
-		<h2 id="problem">{t('home.problem.title')}</h2>
-		<div class="problem-copy">
-			<p>{t('home.problem.body1')}</p>
-			<p>{t('home.problem.body2')}</p>
+		<div use:reveal>
+			<p class="kicker">{t('home.problem.kicker')}</p>
+			<h2 id="problem">{t('home.problem.title')}</h2>
 		</div>
 		<dl class="stats">
-			<div>
+			<div use:reveal={0}>
 				<dt class="num">{t('home.stat.remit.value')}</dt>
 				<dd>{t('home.stat.remit.label')}</dd>
 			</div>
-			<div>
+			<div use:reveal={120}>
 				<dt class="num">{t('home.stat.cost.value')}</dt>
 				<dd>{t('home.stat.cost.label')}</dd>
 			</div>
-			<div class="goal">
+			<div class="goal" use:reveal={240}>
 				<dt class="num">{t('home.stat.goal.value')}</dt>
 				<dd>{t('home.stat.goal.label')}</dd>
 			</div>
@@ -124,33 +131,37 @@
 		<p class="meta">{t('home.stat.source')}</p>
 	</section>
 
-	<!-- 3. The whole journey, as three screens -->
+	<!-- 3. The whole journey, as three screens that play when they scroll in -->
 	<section class="flow" aria-labelledby="flow">
-		<div class="wide">
+		<div class="wide" use:reveal>
 			<p class="kicker">{t('home.flow.kicker')}</p>
 			<h2 id="flow">{t('home.flow.title')}</h2>
 		</div>
 		<ol class="wide panels">
-			<li>
+			<li class="panel shop" use:reveal={0}>
 				<div class="screen" aria-hidden="true">
 					<p class="screen-bar">Boutique Diallo</p>
 					<p class="mini-name">Awa Ndiaye</p>
 					<p class="mini-owe">
-						<span class="meta">{t('tab.owes')}</span> <strong class="num">{money(4700)}</strong>
+						<span class="meta">{t('tab.owes')}</span>
+						<strong class="num">{money(TOTAL)}</strong>
 					</p>
 					<ul class="mini-lines">
-						<li><span>{t('home.sample.rice')}</span><span class="num">{money(2750)}</span></li>
-						<li><span>{t('home.sample.oil')}</span><span class="num">{money(1300)}</span></li>
-						<li><span>{t('home.sample.sugar')}</span><span class="num">{money(650)}</span></li>
+						{#each TAB as line, i (line.key)}
+							<li style:--n={i}>
+								<span>{t(k(line.key))}</span><span class="num">{money(line.amount)}</span>
+							</li>
+						{/each}
 					</ul>
-					<span class="mini-btn">{t('tab.share')}</span>
+					<span class="mini-btn"><Icon name="whatsapp" size={16} /> {t('tab.share')}</span>
 				</div>
 				<h3><span class="n">1</span> {t('home.flow.shop.title')}</h3>
 				<p>{t('home.flow.shop.body')}</p>
 			</li>
-			<li>
-				<div class="screen chat" aria-hidden="true">
-					<p class="screen-bar">Moussa</p>
+			<li class="panel chat" use:reveal={150}>
+				<div class="screen" aria-hidden="true">
+					<p class="screen-bar">Moussa · Paris</p>
+					<div class="typing"><span></span><span></span><span></span></div>
 					<div class="bubble">
 						<p>{t('home.flow.chat.message')}</p>
 						<p class="link">ardoise.app/p/7Qx…</p>
@@ -160,50 +171,25 @@
 				<h3><span class="n">2</span> {t('home.flow.chat.title')}</h3>
 				<p>{t('home.flow.chat.body')}</p>
 			</li>
-			<li>
+			<li class="panel pay" use:reveal={300}>
 				<div class="screen" aria-hidden="true">
 					<p class="screen-bar">Boutique Diallo · Médina</p>
 					<p class="meta">{t('pay.due')}</p>
-					<p class="mini-big num">{money(4700)}</p>
-					<p class="meta">≈ 7,17 €</p>
-					<span class="mini-btn pay"><Icon name="bolt" size={16} /> {t('pay.submit')}</span>
+					<p class="mini-big num">{money(TOTAL)}</p>
+					<p class="meta">≈ {totalEur}</p>
+					<span class="mini-btn pay-btn"><Icon name="bolt" size={16} /> {t('pay.submit')}</span>
 					<p class="mini-done"><Icon name="check" size={18} /> {t('home.flow.pay.done')}</p>
 				</div>
 				<h3><span class="n">3</span> {t('home.flow.pay.title')}</h3>
-				<p>{t('home.flow.pay.body')}</p>
+				<p>{t('home.flow.pay.body', { eur: totalEur })}</p>
 			</li>
 		</ol>
 	</section>
 
-	<!-- 4. Before and after, in the product's own ink -->
-	<section class="wide compare" aria-labelledby="compare">
-		<h2 id="compare">{t('home.compare.title')}</h2>
-		<div class="compare-head" aria-hidden="true">
-			<span>{t('home.compare.before')}</span><span>{t('home.compare.after')}</span>
-		</div>
-		<ul class="pairs">
-			{#each [1, 2, 3, 4] as n (n)}
-				<li>
-					<p class="before">
-						<span class="sr-only">{t('home.compare.before')} :</span>
-						<s>{t(k(`home.compare.${n}.before`))}</s>
-					</p>
-					<p class="after">
-						<Icon name="check" size={18} />
-						<span
-							><span class="sr-only">{t('home.compare.after')} :</span>
-							{t(k(`home.compare.${n}.after`))}</span
-						>
-					</p>
-				</li>
-			{/each}
-		</ul>
-	</section>
-
-	<!-- 5. For the people who will audit it -->
+	<!-- 4. For the people who will audit it -->
 	<section class="band features" aria-labelledby="features">
 		<div class="wide stack" style:--stack="var(--s-5)">
-			<div class="features-head">
+			<div class="features-head" use:reveal>
 				<div>
 					<p class="kicker">{t('home.features.kicker')}</p>
 					<h2 id="features">{t('home.features.title')}</h2>
@@ -214,7 +200,8 @@
 						<span>
 							<strong
 								>{t('home.rate.label')} · {t('home.rate.value', {
-									sats: formatNumber(data.rate.satsPerThousand, data.locale)
+									amount: money(1000),
+									sats: formatSats(data.rate.satsPerThousand, data.locale)
 								})}</strong
 							>
 							<span class="meta">{t('home.rate.sources', { sources })}</span>
@@ -223,9 +210,9 @@
 				{/if}
 			</div>
 			<ul class="grid">
-				{#each features as feature (feature.key)}
-					<li>
-						<Icon name={feature.icon} />
+				{#each features as feature, i (feature.key)}
+					<li use:reveal={(i % 3) * 90}>
+						<span class="feature-icon"><Icon name={feature.icon} /></span>
 						<h3>{t(k(`home.feature.${feature.key}.title`))}</h3>
 						<p>{t(k(`home.feature.${feature.key}.body`))}</p>
 					</li>
@@ -236,19 +223,20 @@
 
 	<!-- 6. Questions a shopkeeper actually asks -->
 	<section class="wide faq" aria-labelledby="faq">
-		<h2 id="faq">{t('home.faq.title')}</h2>
-		{#each [1, 2, 3, 4, 5, 6] as n (n)}
-			<details>
-				<summary>{t(k(`home.faq.${n}.q`))}</summary>
-				<p>{t(k(`home.faq.${n}.a`))}</p>
-			</details>
-		{/each}
+		<h2 id="faq" use:reveal>{t('home.faq.title')}</h2>
+		<div use:reveal={80}>
+			{#each [1, 2, 3, 4] as n (n)}
+				<details>
+					<summary>{t(k(`home.faq.${n}.q`))}</summary>
+					<p>{t(k(`home.faq.${n}.a`))}</p>
+				</details>
+			{/each}
+		</div>
 	</section>
 
 	<section class="final">
-		<div class="wide stack" style:--stack="var(--s-4)">
+		<div class="wide stack" style:--stack="var(--s-4)" use:reveal>
 			<h2>{t('home.final.title')}</h2>
-			<p>{t('home.final.body')}</p>
 			<div class="ctas">
 				<a class="btn" href={data.signedIn ? '/app' : '/signup'}>
 					{data.signedIn ? t('home.continue') : t('home.cta')}
@@ -263,10 +251,39 @@
 	</section>
 </main>
 
-<footer class="wide foot">
-	<Wordmark />
-	<p class="meta">{t('home.footer')}</p>
-	<a class="meta" href="https://github.com/imthegoodboy/ardoise">{t('home.source')}</a>
+<!-- The bottom of a notebook page: ruled, with a margin, and a spark running along it. -->
+<footer class="foot">
+	<div class="spark" aria-hidden="true"></div>
+	<div class="wide foot-grid">
+		<div class="foot-brand">
+			<Wordmark />
+			<p class="small">{t('app.tagline')}</p>
+			<p class="meta">{t('home.footer.note')}</p>
+		</div>
+		<nav class="foot-col" aria-label={t('home.footer.product')}>
+			<p class="foot-title">{t('home.footer.product')}</p>
+			<a href={data.signedIn ? '/app' : '/signup'}
+				>{data.signedIn ? t('home.continue') : t('home.cta')}</a
+			>
+			{#if data.demoEnabled}<a href="/demo">{t('home.demo')}</a>{/if}
+			<a href="/login">{t('common.login')}</a>
+		</nav>
+		<div class="foot-col">
+			<p class="foot-title">{t('home.footer.tech')}</p>
+			<span>Bitcoin Lightning</span>
+			<span>Nostr Wallet Connect</span>
+			<span>WebLN · BOLT11</span>
+		</div>
+		<nav class="foot-col" aria-label={t('home.footer.project')}>
+			<p class="foot-title">{t('home.footer.project')}</p>
+			<a href="https://github.com/imthegoodboy/ardoise">{t('home.source')}</a>
+			<a href="https://github.com/imthegoodboy/ardoise/blob/main/LICENSE"
+				>{t('home.footer.licence')}</a
+			>
+			<LangSwitch />
+		</nav>
+	</div>
+	<p class="wide foot-legal meta">© {year} Ardoise · {t('home.footer')}</p>
 </footer>
 
 <style>
@@ -308,7 +325,11 @@
 	/* Hero */
 
 	.hero {
-		background: var(--peel-soft);
+		position: relative;
+		overflow: clip;
+		background:
+			radial-gradient(60rem 30rem at 85% 0%, rgb(247 147 26 / 0.16), transparent 60%),
+			var(--peel-soft);
 		border-block: 1px solid var(--rule);
 		padding-block: var(--s-6) var(--s-7);
 	}
@@ -327,6 +348,18 @@
 	.lead {
 		font-size: var(--t-lead);
 		max-width: 34rem;
+	}
+
+	.rise {
+		animation: rise 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+		animation-delay: var(--d, 0ms);
+	}
+
+	@keyframes rise {
+		from {
+			opacity: 0;
+			transform: translateY(14px);
+		}
 	}
 
 	.ctas {
@@ -364,6 +397,55 @@
 		color: var(--paid);
 	}
 
+	.art {
+		position: relative;
+		align-self: start;
+		padding-block-start: var(--s-5);
+	}
+
+	.toast {
+		position: absolute;
+		z-index: 2;
+		inset-block-start: 0;
+		inset-inline-end: var(--s-2);
+		display: inline-flex;
+		align-items: center;
+		gap: var(--s-2);
+		padding: 0.55rem 0.9rem 0.55rem 0.55rem;
+		border-radius: 999px;
+		background: var(--ink);
+		color: var(--peel-soft);
+		font-size: var(--t-small);
+		font-weight: 700;
+		box-shadow: 0 10px 24px -10px rgb(38 23 11 / 0.6);
+		animation:
+			toast-in 520ms cubic-bezier(0.2, 0.9, 0.3, 1.3) 600ms both,
+			toast-float 4s ease-in-out 1.4s infinite;
+	}
+
+	.toast-bolt {
+		display: grid;
+		place-items: center;
+		width: 1.6rem;
+		height: 1.6rem;
+		border-radius: 50%;
+		background: var(--orange);
+		color: var(--ink);
+	}
+
+	@keyframes toast-in {
+		from {
+			opacity: 0;
+			transform: translateY(-10px) scale(0.9);
+		}
+	}
+
+	@keyframes toast-float {
+		50% {
+			transform: translateY(-4px);
+		}
+	}
+
 	.sheet-art {
 		margin: 0;
 		padding: var(--s-4) var(--s-4) var(--s-3);
@@ -373,7 +455,7 @@
 			0 1px 0 var(--rule-strong),
 			0 18px 40px -18px rgb(120 60 0 / 0.35);
 		rotate: -1.2deg;
-		align-self: start;
+		animation: rise 800ms cubic-bezier(0.2, 0.8, 0.2, 1) 150ms both;
 	}
 
 	figcaption {
@@ -390,7 +472,7 @@
 	}
 
 	.arrive {
-		animation: arrive 500ms cubic-bezier(0.2, 0.8, 0.2, 1) 700ms both;
+		animation: arrive 500ms cubic-bezier(0.2, 0.8, 0.2, 1) 900ms both;
 	}
 
 	@keyframes arrive {
@@ -415,14 +497,6 @@
 
 	.problem {
 		padding-block: var(--s-7) var(--s-6);
-	}
-
-	.problem-copy {
-		display: grid;
-		gap: var(--s-3);
-		margin-block: var(--s-4) var(--s-5);
-		max-width: 40rem;
-		font-size: var(--t-lead);
 	}
 
 	.stats {
@@ -461,9 +535,7 @@
 
 	.flow {
 		padding-block: var(--s-6);
-		background:
-			linear-gradient(var(--rule), var(--rule)) top / 100% 1px no-repeat,
-			var(--paper);
+		border-block-start: 1px solid var(--rule);
 	}
 
 	.panels {
@@ -557,7 +629,7 @@
 		font-weight: 700;
 	}
 
-	.mini-btn.pay {
+	.mini-btn.pay-btn {
 		background: var(--orange);
 		box-shadow: none;
 	}
@@ -576,12 +648,16 @@
 		font-weight: 700;
 	}
 
-	.chat {
+	.chat .screen {
 		background: #efe7dd;
 	}
 
 	.chat .screen-bar {
 		border-block-end-color: #d9cdbf;
+	}
+
+	.typing {
+		display: none;
 	}
 
 	.bubble {
@@ -591,6 +667,7 @@
 		border-radius: 0.9rem 0.9rem 0.2rem 0.9rem;
 		background: #d9fdd3;
 		box-shadow: 0 1px 1px rgb(0 0 0 / 0.08);
+		transform-origin: bottom right;
 	}
 
 	.bubble .link {
@@ -607,49 +684,81 @@
 		color: #667781;
 	}
 
-	/* Compare */
-
-	.compare {
-		padding-block: var(--s-7) var(--s-6);
+	/* Each screen plays its moment once it has scrolled in. */
+	.panel:global(.in) .mini-lines li {
+		animation: arrive 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+		animation-delay: calc(500ms + var(--n) * 160ms);
 	}
 
-	.compare-head {
-		display: none;
+	.panel.shop:global(.in) .mini-btn {
+		animation: press 600ms ease 1300ms both;
 	}
 
-	.pairs {
-		list-style: none;
-		margin: var(--s-4) 0 0;
-		padding: 0;
-		border-block-start: 1px solid var(--rule);
+	.panel.chat:global(.in) .typing {
+		display: inline-flex;
+		justify-self: end;
+		gap: 4px;
+		padding: 0.6rem 0.8rem;
+		border-radius: 0.9rem;
+		background: #fff;
+		animation: vanish 1ms linear 1300ms forwards;
 	}
 
-	.pairs li {
-		display: grid;
-		gap: var(--s-2);
-		padding-block: var(--s-4);
-		border-block-end: 1px solid var(--rule);
+	.typing span {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: #8a7f73;
+		animation: bounce 900ms ease-in-out infinite;
 	}
 
-	.before {
-		color: var(--ink-soft);
+	.typing span:nth-child(2) {
+		animation-delay: 150ms;
 	}
 
-	.before s {
-		text-decoration-color: rgb(168 71 11 / 0.7);
-		text-decoration-thickness: 2px;
+	.typing span:nth-child(3) {
+		animation-delay: 300ms;
 	}
 
-	.after {
-		display: flex;
-		gap: var(--s-2);
-		font-weight: 700;
+	.panel.chat:global(.in) .bubble {
+		animation: pop 420ms cubic-bezier(0.2, 0.9, 0.3, 1.3) 1300ms both;
 	}
 
-	.after :global(svg) {
-		flex: none;
-		color: var(--paid);
-		margin-block-start: 0.15rem;
+	.panel.pay:global(.in) .pay-btn {
+		animation: press 600ms ease 1200ms both;
+	}
+
+	.panel.pay:global(.in) .mini-done {
+		animation: arrive 420ms ease 1800ms both;
+	}
+
+	@keyframes press {
+		40% {
+			transform: scale(0.94);
+			filter: brightness(0.92);
+		}
+	}
+
+	@keyframes pop {
+		from {
+			opacity: 0;
+			transform: scale(0.6);
+		}
+	}
+
+	@keyframes vanish {
+		to {
+			opacity: 0;
+			height: 0;
+			padding: 0;
+			margin: 0;
+		}
+	}
+
+	@keyframes bounce {
+		50% {
+			transform: translateY(-3px);
+		}
 	}
 
 	/* Features */
@@ -685,12 +794,13 @@
 		margin-block-start: 0.4rem;
 		border-radius: 50%;
 		background: var(--paid);
-		animation: blink 1.6s ease-in-out infinite;
+		box-shadow: 0 0 0 0 rgb(28 124 74 / 0.5);
+		animation: ping 1.8s ease-out infinite;
 	}
 
-	@keyframes blink {
-		50% {
-			opacity: 0.3;
+	@keyframes ping {
+		to {
+			box-shadow: 0 0 0 8px rgb(28 124 74 / 0);
 		}
 	}
 
@@ -706,15 +816,29 @@
 		padding: var(--s-4);
 		border-radius: var(--r-control);
 		background: var(--paper);
+		transition:
+			transform 200ms ease,
+			box-shadow 200ms ease;
 	}
 
-	.grid :global(svg) {
+	.grid li:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 14px 30px -18px rgb(120 60 0 / 0.45);
+	}
+
+	.feature-icon {
+		display: inline-grid;
+		place-items: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		border-radius: 0.75rem;
+		background: var(--peel-soft);
 		color: var(--ember);
 	}
 
 	.grid h3 {
 		font-size: var(--t-body);
-		margin-block: var(--s-2) var(--s-1);
+		margin-block: var(--s-3) var(--s-1);
 	}
 
 	.grid p {
@@ -767,28 +891,27 @@
 		background: var(--peel);
 		font-size: 1.25rem;
 		line-height: 1;
+		transition: rotate 250ms ease;
 	}
 
 	details[open] summary::after {
-		content: '−';
+		rotate: 45deg;
 	}
 
 	details p {
 		padding-block-end: var(--s-4);
 		max-width: 44rem;
 		color: var(--ink-soft);
+		animation: arrive 300ms ease both;
 	}
 
 	/* Final call */
 
 	.final {
 		padding-block: var(--s-7);
-		background: var(--orange);
-	}
-
-	.final p {
-		font-size: var(--t-lead);
-		max-width: 34rem;
+		background:
+			radial-gradient(40rem 20rem at 10% 100%, rgb(255 255 255 / 0.25), transparent 60%),
+			var(--orange);
 	}
 
 	.final .btn {
@@ -802,13 +925,98 @@
 		box-shadow: none;
 	}
 
+	/* Footer */
+
 	.foot {
-		display: flex;
-		flex-wrap: wrap;
+		position: relative;
+		padding-block: var(--s-6) var(--s-5);
+		background:
+			linear-gradient(var(--margin-line), var(--margin-line)) no-repeat 2.25rem 0 / 1.5px 100%,
+			repeating-linear-gradient(transparent 0 31px, var(--rule) 31px 32px),
+			var(--paper);
+	}
+
+	.spark {
+		position: absolute;
+		inset: 0 0 auto;
+		height: 3px;
+		background:
+			linear-gradient(
+					90deg,
+					transparent 0%,
+					var(--orange) 45%,
+					#fff4c2 50%,
+					var(--orange) 55%,
+					transparent 100%
+				)
+				no-repeat -40% 0 / 40% 100%,
+			var(--rule-strong);
+		animation: spark 4.5s cubic-bezier(0.6, 0, 0.4, 1) infinite;
+	}
+
+	@keyframes spark {
+		to {
+			background-position:
+				140% 0,
+				0 0;
+		}
+	}
+
+	.foot-grid {
+		display: grid;
+		gap: var(--s-5);
+		padding-inline-start: var(--s-6);
+	}
+
+	.foot-brand {
+		display: grid;
+		gap: var(--s-2);
+		max-width: 22rem;
+	}
+
+	.foot-col {
+		display: grid;
+		gap: var(--s-1);
+		align-content: start;
+		font-size: var(--t-small);
+	}
+
+	.foot-title {
+		font-weight: 700;
+		font-size: var(--t-meta);
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--ember);
+	}
+
+	.foot-col a,
+	.foot-col span {
+		display: inline-flex;
 		align-items: center;
-		justify-content: space-between;
-		gap: var(--s-3);
-		padding-block: var(--s-5) var(--s-6);
+		min-height: 2.25rem;
+		color: var(--ink);
+	}
+
+	.foot-col a {
+		text-decoration: none;
+		background: linear-gradient(var(--orange), var(--orange)) no-repeat 0 85% / 0% 2px;
+		transition: background-size 250ms ease;
+		justify-self: start;
+	}
+
+	.foot-col a:hover,
+	.foot-col a:focus-visible {
+		background-size: 100% 2px;
+	}
+
+	.foot-col :global(.lang) {
+		justify-self: start;
+		padding-inline: 0;
+	}
+
+	.foot-legal {
+		margin-block-start: var(--s-5);
+		padding-inline-start: calc(var(--s-4) + var(--s-6));
 	}
 
 	@media (min-width: 40rem) {
@@ -820,29 +1028,8 @@
 			grid-template-columns: repeat(2, 1fr);
 		}
 
-		.pairs li {
-			grid-template-columns: 1fr 1fr;
-			gap: var(--s-5);
-		}
-
-		.compare-head {
-			display: grid;
-			grid-template-columns: 1fr 1fr;
-			gap: var(--s-5);
-			margin-block-start: var(--s-4);
-			font-size: var(--t-small);
-			font-weight: 700;
-			text-transform: uppercase;
-			letter-spacing: 0.08em;
-			color: var(--ink-soft);
-		}
-
-		.compare-head span:last-child {
-			color: var(--paid);
-		}
-
-		.pairs {
-			margin-block-start: var(--s-2);
+		.foot-grid {
+			grid-template-columns: 1.4fr repeat(3, 1fr);
 		}
 	}
 
