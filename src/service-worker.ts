@@ -14,7 +14,8 @@ import { assets, immutable } from '$app/manifest';
 import { self } from '$app/service-worker';
 
 const STATIC = `ardoise-static-${version}`;
-const PAGES = 'ardoise-pages';
+// Pages are tied to the release whose scripts they reference.
+const PAGES = `ardoise-pages-${version}`;
 
 const precache = [...immutable.map((file) => file.path), ...assets.map((file) => file.path)].filter(
 	(path) => !path.startsWith('/samples/') && !path.endsWith('.png')
@@ -37,7 +38,11 @@ self.addEventListener('activate', (event) => {
 			.then((keys) =>
 				Promise.all(
 					keys
-						.filter((key) => key.startsWith('ardoise-static-') && key !== STATIC)
+						.filter(
+							(key) =>
+								(key.startsWith('ardoise-static-') && key !== STATIC) ||
+								(key.startsWith('ardoise-pages-') && key !== PAGES)
+						)
 						.map((key) => caches.delete(key))
 				)
 			)
@@ -53,6 +58,11 @@ self.addEventListener('message', (event) => {
 async function bookPage(request: Request): Promise<Response> {
 	try {
 		const response = await fetch(request);
+		// Signed out (here, or remotely with "sign out every device"): forget the book.
+		if (response.redirected && new URL(response.url).pathname === '/login') {
+			await caches.delete(PAGES);
+			return response;
+		}
 		if (response.ok && !response.redirected) {
 			const cache = await caches.open(PAGES);
 			await cache.put(request, response.clone());

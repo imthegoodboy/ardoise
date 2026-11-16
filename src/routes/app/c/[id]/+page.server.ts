@@ -77,7 +77,7 @@ export const actions: Actions = {
 		const form = await request.formData();
 		const entryId = form.get('entryId');
 		if (!isUuid(entryId)) return fail(400, { lineError: true });
-		await setVoided(shop.id, entryId, form.get('voided') === '1');
+		await setVoided(shop.id, params.id, entryId, form.get('voided') === '1');
 		return { voided: true };
 	},
 

@@ -236,6 +236,25 @@ describe('exchange rate', () => {
 		).toBeNull();
 	});
 
+	it('needs every accepted pair of feeds to agree, and a majority of them', async () => {
+		// 5% apart: each is within 3% of their midpoint, but not of each other.
+		expect(
+			await fetchLiveRate(
+				feeds({ kraken: 58_000, coinbase: 61_000, bitstamp: null, coingecko: null })
+			)
+		).toBeNull();
+		// Two pairs that disagree with each other: no majority, no price.
+		expect(
+			await fetchLiveRate(
+				feeds({ kraken: 58_000, coinbase: 58_200, bitstamp: 70_000, coingecko: 70_100 })
+			)
+		).toBeNull();
+		const two = await fetchLiveRate(
+			feeds({ kraken: 58_000, coinbase: 58_400, bitstamp: null, coingecko: null })
+		);
+		expect(two?.eurPerBtc).toBe(58_200);
+	});
+
 	it('falls back to the last good price for a while', async () => {
 		setRateFetch(feeds({ kraken: 60_000, coinbase: 60_000, bitstamp: 60_000, coingecko: 60_000 }));
 		expect((await currentRate())?.stale).toBe(false);

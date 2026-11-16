@@ -152,9 +152,9 @@ describe('entries', () => {
 			amountXof: 900,
 			label: ''
 		});
-		expect(await setVoided(shop.id, id, true)).toBe(true);
+		expect(await setVoided(shop.id, customer.id, id, true)).toBe(true);
 		expect(balanceOf(await listEntries(customer.id))).toBe(0);
-		expect(await setVoided(shop.id, id, false)).toBe(true);
+		expect(await setVoided(shop.id, customer.id, id, false)).toBe(true);
 		expect(balanceOf(await listEntries(customer.id))).toBe(900);
 	});
 
@@ -245,6 +245,26 @@ describe('accounts', () => {
 		const locked = await logIn({ phone: '775550202', pin: '482915', clientKey: 'owner' });
 		expect(locked.ok).toBe(false);
 		expect(locked.ok === false && locked.error).toBe('locked');
+	});
+
+	it('holds the limit when wrong PINs arrive all at once', async () => {
+		await signUp({
+			name: 'Boutique Ba',
+			place: '',
+			phone: '775550303',
+			pin: '482915',
+			locale: 'fr',
+			clientKey: client
+		});
+		const guesses = await Promise.all(
+			Array.from({ length: 12 }, (_, i) =>
+				logIn({ phone: '775550303', pin: String(100000 + i * 7), clientKey: 'swarm-' + i })
+			)
+		);
+		const checked = guesses.filter((guess) => !guess.ok && guess.error === 'invalid');
+		expect(checked.length).toBeLessThanOrEqual(5);
+		const owner = await logIn({ phone: '775550303', pin: '482915', clientKey: 'owner-2' });
+		expect(owner.ok === false && owner.error).toBe('locked');
 	});
 
 	it('runs sessions by hashed token', async () => {

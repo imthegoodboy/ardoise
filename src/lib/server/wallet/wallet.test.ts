@@ -102,17 +102,28 @@ describe('relay address guard', () => {
 		'fe80::1',
 		'fd12:3456::1',
 		'::ffff:10.0.0.1',
+		'::ffff:7f00:1',
+		'::ffff:a9fe:a9fe',
+		'::7f00:1',
+		'64:ff9b::a00:1',
+		'fec0::1',
+		'0:0:0:0:0:ffff:192.168.0.1',
 		'not-an-ip'
 	])('treats %s as private', (ip) => {
 		expect(isPrivateAddress(ip)).toBe(true);
 	});
 
-	it.each(['8.8.8.8', '172.32.0.1', '1.1.1.1', '2606:4700:4700::1111', '::ffff:8.8.8.8'])(
-		'treats %s as public',
-		(ip) => {
-			expect(isPrivateAddress(ip)).toBe(false);
-		}
-	);
+	it.each([
+		'8.8.8.8',
+		'172.32.0.1',
+		'1.1.1.1',
+		'2606:4700:4700::1111',
+		'::ffff:8.8.8.8',
+		'::ffff:808:808',
+		'64:ff9b::808:808'
+	])('treats %s as public', (ip) => {
+		expect(isPrivateAddress(ip)).toBe(false);
+	});
 
 	it.each([
 		'ws://relay.example.com',
@@ -120,6 +131,8 @@ describe('relay address guard', () => {
 		'wss://user:pass@relay.example.com',
 		'wss://127.0.0.1',
 		'wss://[::1]:4848',
+		'wss://[::ffff:127.0.0.1]',
+		'wss://[::ffff:7f00:1]/v1',
 		'wss://169.254.169.254/latest/meta-data',
 		'wss://localhost',
 		'wss://db',

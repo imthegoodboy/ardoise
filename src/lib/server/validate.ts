@@ -9,12 +9,12 @@ import { normalizePhone } from '#lib/phone.ts';
 
 export function cleanText(value: unknown, max: number): string {
 	if (typeof value !== 'string') return '';
-	return value
+	const text = value
 		.normalize('NFC')
 		.replace(/[\p{Cc}\p{Cf}]/gu, ' ')
 		.replace(/\s+/g, ' ')
-		.trim()
-		.slice(0, max);
+		.trim();
+	return [...text].slice(0, max).join('').trim();
 }
 
 export const isUuid = (value: unknown): value is string =>

@@ -116,9 +116,25 @@ export async function fetchLiveRate(doFetch: Fetch = activeFetch()): Promise<Rat
 	);
 	if (quoted.length < 2) return null;
 
-	const middle = median(quoted.map((answer) => answer.value));
-	const agreeing = quoted.filter((answer) => Math.abs(answer.value - middle) / middle <= AGREEMENT);
-	if (agreeing.length < 2) return null;
+	// Largest group of feeds whose highest and lowest quotes are within 3% of each
+	// other: every accepted pair agrees, and two honest feeds win over two
+	// broken ones that happen to straddle them.
+	const sorted = [...quoted].sort((a, b) => a.value - b.value);
+	let agreeing: typeof quoted = [];
+	for (let start = 0; start < sorted.length; start++) {
+		let end = start;
+		while (
+			end + 1 < sorted.length &&
+			sorted[end + 1].value <= sorted[start].value * (1 + AGREEMENT)
+		) {
+			end++;
+		}
+		const group = sorted.slice(start, end + 1);
+		if (group.length > agreeing.length) agreeing = group;
+	}
+	agreeing = quoted.filter((answer) => agreeing.includes(answer)); // keep the feeds' own order
+	// ...and that group must be a majority of the feeds that answered.
+	if (agreeing.length < 2 || agreeing.length * 2 <= quoted.length) return null;
 
 	const eurPerBtc = median(agreeing.map((answer) => answer.value));
 	return {

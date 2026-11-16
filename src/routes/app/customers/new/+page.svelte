@@ -7,6 +7,7 @@
 
 	let { data, form }: PageProps = $props();
 	const t = $derived(makeT(data.locale));
+	let busy = $state(false);
 </script>
 
 <svelte:head>
@@ -19,12 +20,24 @@
 		<h1>{t('customer.new.title')}</h1>
 	</div>
 
-	<form method="POST" class="stack" use:enhance>
+	<form
+		method="POST"
+		class="stack"
+		use:enhance={({ cancel }) => {
+			// One tap, one customer: a second tap while saving is ignored.
+			if (busy) return cancel();
+			busy = true;
+			return async ({ update }) => {
+				await update({ reset: false });
+				busy = false;
+			};
+		}}
+	>
 		{#if form?.error}
 			<p class="note note-error" role="alert">{t(`error.${form.error}` as MessageKey)}</p>
 		{/if}
 		<CustomerFields name={form?.name} phone={form?.phone} limit={form?.limit} />
-		<button class="btn btn-wide">{t('customer.create')}</button>
+		<button class="btn btn-wide" aria-busy={busy}>{t('customer.create')}</button>
 	</form>
 </main>
 

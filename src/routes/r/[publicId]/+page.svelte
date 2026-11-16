@@ -62,7 +62,7 @@
 			</div>
 			<div>
 				<dt>{t('receipt.sats')}</dt>
-				<dd class="num">{formatSats(r.amountSats, data.locale)} sats</dd>
+				<dd class="num">{formatSats(r.amountSats, data.locale)}</dd>
 			</div>
 			<div>
 				<dt>{t('receipt.rate')}</dt>

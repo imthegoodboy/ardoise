@@ -15,7 +15,11 @@ export interface OutboxEntry {
 
 const KEY = 'ardoise.outbox.v1';
 
+/** Used when localStorage is blocked or full: lines survive this visit, not a reload. */
+let memory: OutboxEntry[] | null = null;
+
 function read(): OutboxEntry[] {
+	if (memory) return memory;
 	try {
 		const parsed = JSON.parse(localStorage.getItem(KEY) ?? '[]');
 		return Array.isArray(parsed) ? parsed : [];
@@ -28,8 +32,9 @@ function write(entries: OutboxEntry[]) {
 	try {
 		if (entries.length) localStorage.setItem(KEY, JSON.stringify(entries));
 		else localStorage.removeItem(KEY);
+		memory = null;
 	} catch {
-		// Storage full or blocked: the entry stays only in memory for this visit.
+		memory = entries;
 	}
 	notify();
 }

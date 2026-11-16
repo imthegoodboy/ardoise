@@ -24,12 +24,15 @@ export const migrations = Object.entries(files)
 const LOCK_ID = 7272_7401;
 
 export async function migrate(db: Db): Promise<string[]> {
-	await db.exec(
-		`create table if not exists schema_migrations (
-			name text primary key,
-			applied_at timestamptz not null default now()
-		)`
-	);
+	await db.tx(async (q) => {
+		await q.query('select pg_advisory_xact_lock($1)', [LOCK_ID]);
+		await q.exec(
+			`create table if not exists schema_migrations (
+				name text primary key,
+				applied_at timestamptz not null default now()
+			)`
+		);
+	});
 
 	const applied: string[] = [];
 	for (const migration of migrations) {

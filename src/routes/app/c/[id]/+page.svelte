@@ -49,6 +49,11 @@
 	function loadQueued() {
 		const waiting = queued(data.customer.id);
 		const ids = new Set(waiting.map((entry) => entry.id));
+		// A line that left the queue without reaching the server was rejected: drop it.
+		const onServer = new Set(data.entries.map((entry) => entry.id));
+		local = local.filter(
+			(entry) => !pendingIds.has(entry.id) || ids.has(entry.id) || onServer.has(entry.id)
+		);
 		pendingIds = ids;
 		const known = new Set(local.map((entry) => entry.id));
 		for (const entry of waiting) {

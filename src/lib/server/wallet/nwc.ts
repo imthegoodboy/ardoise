@@ -16,7 +16,7 @@ import { sha256Hex } from '../crypto.ts';
 import { config } from '../config.ts';
 import { describeError, log } from '../log.ts';
 import { checkInvoice } from './bolt11.ts';
-import { assertPublicRelay } from './hosts.ts';
+import { assertPublicRelay, relaysOf } from './hosts.ts';
 import { WalletError, type PaymentState, type Wallet } from './types.ts';
 
 const REQUIRED_METHODS = ['make_invoice', 'lookup_invoice'];
@@ -79,12 +79,19 @@ function drop(key: string) {
 	}
 }
 
-function clientFor(url: string): { key: string; client: NWCClient } {
+async function clientFor(url: string): Promise<{ key: string; client: NWCClient }> {
 	const key = sha256Hex(url);
 	let entry = clients.get(key);
-	if (entry) clearTimeout(entry.timer);
-	else
+	if (entry) {
+		clearTimeout(entry.timer);
+	} else {
+		// Every new socket re-checks where its relays resolve now, not where they
+		// resolved when the wallet was connected (DNS rebinding).
+		const relays = relaysOf(url);
+		if (!relays.length) throw new WalletError('bad_relay');
+		for (const relay of relays) await assertPublicRelay(relay);
 		entry = { client: new NWCClient({ nostrWalletConnectUrl: url }), timer: setTimeout(() => {}) };
+	}
 	entry.timer = setTimeout(() => drop(key), IDLE_MS);
 	entry.timer.unref?.();
 	clients.set(key, entry);
@@ -111,7 +118,7 @@ async function call<T>(
 	timeoutMs: number,
 	fn: (client: NWCClient) => Promise<T>
 ): Promise<T> {
-	const { key, client } = clientFor(url);
+	const { key, client } = await clientFor(url);
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	try {
 		return await Promise.race([

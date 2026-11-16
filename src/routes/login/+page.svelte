@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { enhance } from '$app/forms';
 	import AuthFrame from '#lib/components/AuthFrame.svelte';
 	import { makeT } from '#lib/i18n/index.ts';
@@ -8,6 +9,9 @@
 	const t = $derived(makeT(data.locale));
 	let busy = $state(false);
 	const PIN_PATTERN = '[0-9]{6}';
+
+	// A new sign-in on this phone starts from a clean offline book.
+	onMount(() => navigator.serviceWorker?.controller?.postMessage('purge'));
 </script>
 
 <svelte:head>

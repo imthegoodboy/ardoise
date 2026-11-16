@@ -51,7 +51,7 @@ export const actions: Actions = {
 	logoutAll: async ({ locals, cookies }) => {
 		await destroyAllSessions(locals.shop!.id);
 		await endSession(cookies);
-		redirect(303, '/login');
+		redirect(303, '/bye?to=login');
 	},
 
 	delete: async ({ request, locals, cookies }) => {
@@ -66,6 +66,6 @@ export const actions: Actions = {
 		await endSession(cookies);
 		await deleteShop(shop.id);
 		log.info('shop.deleted', { shop: shop.id });
-		redirect(303, '/');
+		redirect(303, '/bye');
 	}
 };

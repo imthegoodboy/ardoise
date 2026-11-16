@@ -80,12 +80,12 @@ const BALANCE = `coalesce(sum(
 export async function listCustomers(shopId: string): Promise<CustomerSummary[]> {
 	const db = await getDb();
 	const rows = await db.query(
-		`select c.*, ${BALANCE} as balance_xof, max(e.created_at) as last_activity_at
+		`select c.*, ${BALANCE} as balance_xof, max(e.occurred_at) as last_activity_at
 		 from customers c
 		 left join entries e on e.customer_id = c.id
 		 where c.shop_id = $1 and c.archived_at is null
 		 group by c.id
-		 order by max(e.created_at) desc nulls last, c.created_at desc`,
+		 order by max(e.occurred_at) desc nulls last, c.created_at desc`,
 		[shopId]
 	);
 	return rows.map((row) => ({

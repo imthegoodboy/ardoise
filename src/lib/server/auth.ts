@@ -10,7 +10,7 @@ import type { Locale } from '../money.ts';
 import { normalizePhone } from '../phone.ts';
 import { hashPin, lookupHash, randomToken, sha256Hex, verifyPin } from './crypto.ts';
 import { getDb } from './db/index.ts';
-import { hit, peek, reset, type Limit } from './ratelimit.ts';
+import { hit, reset, type Limit } from './ratelimit.ts';
 import { insertShop, SHOP_COLUMNS, toShop, type Shop } from './shops.ts';
 
 export const SESSION_COOKIE = 'ardoise_session';
@@ -103,7 +103,9 @@ export async function logIn(input: {
 
 	const phoneHmac = lookupHash(phone, 'phone');
 	const triesKey = 'pin:' + phoneHmac.slice(0, 32);
-	const tries = await peek(triesKey, PIN_TRIES);
+	// Count the attempt before checking it: parallel guesses each take a slot,
+	// so the limit holds even when they all arrive at once.
+	const tries = await hit(triesKey, PIN_TRIES);
 	if (!tries.allowed) return { ok: false, error: 'locked', retryAfter: tries.retryAfter };
 
 	const db = await getDb();
@@ -116,10 +118,7 @@ export async function logIn(input: {
 	decoyHash ??= hashPin('decoy-' + randomToken(8));
 	const matches = await verifyPin(input.pin, row ? row.pin_hash : await decoyHash);
 
-	if (!row || !matches) {
-		await hit(triesKey, PIN_TRIES);
-		return { ok: false, error: 'invalid' };
-	}
+	if (!row || !matches) return { ok: false, error: 'invalid' };
 	await reset(triesKey);
 	return { ok: true, shop: toShop(row) };
 }
@@ -130,17 +129,14 @@ export async function confirmPin(
 	pin: string
 ): Promise<'ok' | 'invalid' | 'locked'> {
 	const triesKey = 'pin-confirm:' + shopId;
-	const tries = await peek(triesKey, PIN_TRIES);
+	const tries = await hit(triesKey, PIN_TRIES);
 	if (!tries.allowed) return 'locked';
 
 	const db = await getDb();
 	const rows = await db.query<{ pin_hash: string }>('select pin_hash from shops where id = $1', [
 		shopId
 	]);
-	if (!rows[0] || !isValidPin(pin) || !(await verifyPin(pin, rows[0].pin_hash))) {
-		await hit(triesKey, PIN_TRIES);
-		return 'invalid';
-	}
+	if (!rows[0] || !isValidPin(pin) || !(await verifyPin(pin, rows[0].pin_hash))) return 'invalid';
 	await reset(triesKey);
 	return 'ok';
 }

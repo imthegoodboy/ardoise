@@ -17,7 +17,15 @@ import { currentRate } from './rates.ts';
 import { clientKey, hit } from './ratelimit.ts';
 import { getShop, type Shop } from './shops.ts';
 import { preimageMatches } from './wallet/bolt11.ts';
-import { walletForShop, WalletError, type PaymentState } from './wallet/index.ts';
+import { demoWallet } from './wallet/demo.ts';
+import {
+	connectionForShop,
+	walletForShop,
+	WalletError,
+	type PaymentState,
+	type Wallet
+} from './wallet/index.ts';
+import { nwcWallet } from './wallet/nwc.ts';
 
 export type InvoiceStatus = 'pending' | 'paid' | 'expired';
 
@@ -148,19 +156,59 @@ export async function createInvoice(input: {
 		return { ok: false, error: 'amount' };
 	}
 
-	const wallet = await walletForShop(shop);
-	if (!wallet) return { ok: false, error: 'no_wallet' };
+	const connection = await connectionForShop(shop);
+	if (!connection) return { ok: false, error: 'no_wallet' };
 
+	// One request at a time per tab on this server; the unique index on pending
+	// invoices covers several servers.
+	return serialized(customer.id, () =>
+		issue({
+			shop,
+			customerId: customer.id,
+			payToken: customer.payToken,
+			amountXof,
+			connection,
+			input
+		})
+	);
+}
+
+const queues = new Map<string, Promise<unknown>>();
+
+function serialized<T>(key: string, task: () => Promise<T>): Promise<T> {
+	const previous = queues.get(key) ?? Promise.resolve();
+	const next = previous.then(task, task);
+	const settled = next.finally(() => {
+		if (queues.get(key) === settled) queues.delete(key);
+	});
+	queues.set(
+		key,
+		settled.catch(() => {})
+	);
+	return next;
+}
+
+async function issue(args: {
+	shop: Shop;
+	customerId: string;
+	payToken: string;
+	amountXof: number;
+	connection: NonNullable<Awaited<ReturnType<typeof connectionForShop>>>;
+	input: { payerName?: string | null; client: string };
+}): Promise<CreateInvoiceResult> {
+	const { shop, customerId: customerIdValue, payToken, amountXof, connection, input } = args;
+	const customer = { id: customerIdValue, payToken };
+	const wallet = connection.wallet;
 	const payerName = cleanPayerName(input.payerName);
 	const db = await getDb();
 
 	// Pressing "pay" twice, or reloading, shows the same invoice instead of minting another.
 	const [open_] = await db.query(
 		`select * from invoices
-		 where customer_id = $1 and amount_xof = $2 and status = 'pending' and wallet_kind = $3
+		 where customer_id = $1 and amount_xof = $2 and status = 'pending' and wallet_ref = $3
 		   and expires_at > $4::timestamptz
 		 order by created_at desc limit 1`,
-		[customer.id, amountXof, wallet.kind, new Date(Date.now() + REUSE_MIN_LEFT_MS).toISOString()]
+		[customer.id, amountXof, connection.ref, new Date(Date.now() + REUSE_MIN_LEFT_MS).toISOString()]
 	);
 	if (open_) {
 		if (payerName) {
@@ -180,7 +228,16 @@ export async function createInvoice(input: {
 	const perClient = await hit(clientKey('invoice-client', input.client), INVOICE_LIMITS.perClient);
 	if (!perLink.allowed || !perClient.allowed) return { ok: false, error: 'slow_down' };
 
-	const rate = await currentRate({ allowOffline: wallet.kind === 'demo' || shop.isDemo });
+	// Close out a pending invoice for the same amount that is about to expire, so
+	// the new one can take its place (it stays checkable during the grace period).
+	await db.query(
+		`update invoices set status = 'expired'
+		 where customer_id = $1 and amount_xof = $2 and wallet_ref = $3 and status = 'pending'`,
+		[customer.id, amountXof, connection.ref]
+	);
+
+	// The fixed fallback price exists for the simulated wallet only, never for real sats.
+	const rate = await currentRate({ allowOffline: wallet.kind === 'demo' });
 	if (!rate) return { ok: false, error: 'no_rate' };
 	const amountSats = xofToSats(amountXof, rate.xofPerBtc);
 
@@ -198,27 +255,44 @@ export async function createInvoice(input: {
 	}
 
 	const id = randomUUID();
-	const rows = await db.query(
-		`insert into invoices (id, public_id, shop_id, customer_id, amount_xof, amount_sats,
-			xof_per_btc, rate_sources, wallet_kind, bolt11, payment_hash, payer_name_sealed, expires_at)
-		 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::timestamptz)
+	let rows;
+	try {
+		rows = await db.query(
+			`insert into invoices (id, public_id, shop_id, customer_id, amount_xof, amount_sats,
+			xof_per_btc, rate_sources, wallet_kind, bolt11, payment_hash, payer_name_sealed, expires_at,
+			wallet_ref, wallet_secret)
+		 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::timestamptz, $14, $15)
 		 returning *`,
-		[
-			id,
-			randomToken(12),
-			shop.id,
-			customer.id,
-			amountXof,
-			amountSats,
-			rate.xofPerBtc,
-			rate.sources.join(','),
-			wallet.kind,
-			made.bolt11,
-			made.paymentHash,
-			payerName ? seal(payerName, payerContext(id)) : null,
-			made.expiresAt.toISOString()
-		]
-	);
+			[
+				id,
+				randomToken(12),
+				shop.id,
+				customer.id,
+				amountXof,
+				amountSats,
+				rate.xofPerBtc,
+				rate.sources.join(','),
+				wallet.kind,
+				made.bolt11,
+				made.paymentHash,
+				payerName ? seal(payerName, payerContext(id)) : null,
+				made.expiresAt.toISOString(),
+				connection.ref,
+				connection.secret ? seal(connection.secret, walletContext(id)) : null
+			]
+		);
+	} catch (err) {
+		// Another server won the race for this tab and amount: show its invoice.
+		if ((err as { code?: string }).code !== '23505') throw err;
+		const [winner] = await db.query(
+			`select id from invoices where customer_id = $1 and amount_xof = $2 and wallet_ref = $3
+			   and status = 'pending'`,
+			[customer.id, amountXof, connection.ref]
+		);
+		const existing = winner ? await getInvoiceById(winner.id) : null;
+		if (!existing) throw err;
+		return { ok: true, invoice: existing, reused: true };
+	}
 	log.info('invoice.created', {
 		shop: shop.id,
 		invoice: id,
@@ -244,7 +318,7 @@ export async function settleInvoice(
 				? proof.settledAt
 				: new Date(now);
 		const rows = await q.query(
-			`update invoices set status = 'paid', preimage = coalesce($2, preimage),
+			`update invoices set status = 'paid', preimage = coalesce($2, preimage), wallet_secret = null,
 				paid_at = coalesce(paid_at, greatest($3::timestamptz, created_at))
 			 where id = $1 and status <> 'paid'
 			 returning shop_id, customer_id, amount_xof, paid_at`,
@@ -270,17 +344,40 @@ export async function settleInvoice(
 	});
 }
 
-/** Accept a settled state only if its proof, when there is one, is genuine. */
+/**
+ * A tab is only credited with proof: the preimage whose SHA-256 is the
+ * invoice's payment hash. A wallet that says "settled" without it is not
+ * believed, whatever the reason.
+ */
 function acceptable(
 	invoice: Invoice,
 	state: PaymentState
 ): state is Extract<PaymentState, { state: 'settled' }> {
 	if (state.state !== 'settled') return false;
-	if (state.preimage && !preimageMatches(state.preimage, invoice.paymentHash)) {
-		log.warn('invoice.bad_preimage', { invoice: invoice.id });
+	if (!state.preimage || !preimageMatches(state.preimage, invoice.paymentHash)) {
+		log.warn('invoice.unproven_settlement', {
+			invoice: invoice.id,
+			preimage: Boolean(state.preimage)
+		});
 		return false;
 	}
 	return true;
+}
+
+const walletContext = (invoiceId: string) => 'invoices.wallet:' + invoiceId;
+
+/** The wallet that issued this invoice, even if the shop has connected another since. */
+async function walletForInvoice(invoice: Invoice, shop: Shop | null): Promise<Wallet | null> {
+	if (invoice.walletKind === 'demo') return demoWallet();
+	const db = await getDb();
+	const [row] = await db.query<{ wallet_secret: string | null }>(
+		'select wallet_secret from invoices where id = $1',
+		[invoice.id]
+	);
+	if (row?.wallet_secret) return nwcWallet(open(row.wallet_secret, walletContext(invoice.id)));
+	// Invoices from before wallets were recorded per invoice: the shop's current wallet.
+	const current = shop ? await walletForShop(shop) : null;
+	return current?.kind === invoice.walletKind ? current : null;
 }
 
 /**
@@ -306,8 +403,8 @@ export async function refreshInvoice(invoice: Invoice, shop?: Shop | null): Prom
 	if (!claimed.length) return (await getInvoiceById(invoice.id)) ?? invoice;
 
 	const owner = shop ?? (await getShop(invoice.shopId));
-	const wallet = owner ? await walletForShop(owner) : null;
-	if (wallet && wallet.kind === invoice.walletKind) {
+	const wallet = await walletForInvoice(invoice, owner);
+	if (wallet) {
 		try {
 			const state = await wallet.lookupInvoice(invoice.paymentHash);
 			if (acceptable(invoice, state)) {
@@ -355,10 +452,17 @@ export async function reconcile(options: { shopId?: string; limit?: number } = {
 		 where (status = 'pending' or (status = 'expired' and expires_at > $1::timestamptz))
 		   and (last_checked_at is null or last_checked_at < now() - interval '15 seconds')
 		   ${scope}
-		 order by created_at desc
+		 order by last_checked_at nulls first, created_at
 		 limit $2`,
 		params
 	);
+	if (!options.shopId) {
+		await db.query(
+			`update invoices set wallet_secret = null
+			 where wallet_secret is not null and status <> 'pending' and expires_at < $1::timestamptz`,
+			[params[0]]
+		);
+	}
 	const results = await Promise.allSettled(rows.map((row) => refreshInvoice(toInvoice(row))));
 	const settled = results.filter(
 		(result) => result.status === 'fulfilled' && result.value.status === 'paid'

@@ -34,7 +34,9 @@ export function setLocaleCookie(cookies: Cookies, locale: Locale) {
 
 /** Only same-site paths are accepted as "where to go next" (no open redirect). */
 export function safeNext(value: string | null | undefined, fallback = '/app'): string {
-	if (!value || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) {
+	// Browsers drop tabs and newlines from a Location header, so `/<TAB>/evil.example`
+	// would become `//evil.example`: refuse every control character and backslash.
+	if (!value || !value.startsWith('/') || value.startsWith('//') || /[\\\p{Cc}]/u.test(value)) {
 		return fallback;
 	}
 	return value;

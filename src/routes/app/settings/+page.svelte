@@ -2,7 +2,6 @@
 	import { enhance } from '$app/forms';
 	import Icon from '#lib/components/Icon.svelte';
 	import { makeT, type MessageKey } from '#lib/i18n/index.ts';
-	import { clearOutbox } from '#lib/outbox.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -116,11 +115,11 @@
 
 	<section class="stack" style:--stack="var(--s-3)">
 		<h2>{t('settings.devices')}</h2>
-		<form method="POST" action="/logout" onsubmit={clearOutbox}>
+		<form method="POST" action="/logout">
 			<button class="btn btn-quiet btn-wide">{t('common.logout')}</button>
 		</form>
 		{#if !data.shop.isDemo}
-			<form method="POST" action="?/logoutAll" onsubmit={clearOutbox}>
+			<form method="POST" action="?/logoutAll">
 				<button class="btn btn-plain">{t('settings.logoutAll')}</button>
 			</form>
 		{/if}
@@ -134,13 +133,7 @@
 	<section class="stack danger" style:--stack="var(--s-3)">
 		<h2>{t('settings.delete')}</h2>
 		<p class="small">{t('settings.deleteHint')}</p>
-		<form
-			method="POST"
-			action="?/delete"
-			class="stack"
-			style:--stack="var(--s-3)"
-			onsubmit={clearOutbox}
-		>
+		<form method="POST" action="?/delete" class="stack" style:--stack="var(--s-3)">
 			{#if form && 'deleteError' in form && form.deleteError}<p
 					class="note note-error"
 					role="alert"

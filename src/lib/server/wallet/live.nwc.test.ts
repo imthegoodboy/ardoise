@@ -77,6 +77,11 @@ describe('a real NWC wallet', () => {
 		expect(invoice.walletKind).toBe('nwc');
 		expect(invoice.rateSources.length).toBeGreaterThanOrEqual(2);
 
+		// The shop switches to another wallet before the money lands. The payment
+		// went to the first wallet, and must still be credited.
+		const replacement = await createFaucetWallet(1_000);
+		await setWallet(shop.id, { kind: 'nwc', secret: replacement, label: 'Second wallet' });
+
 		expect(await payWithFaucet(invoice.bolt11)).toBe(true);
 
 		let current = invoice;
@@ -85,7 +90,8 @@ describe('a real NWC wallet', () => {
 			current = await refreshInvoice(current);
 		}
 		expect(current.status).toBe('paid');
-		if (current.preimage) expect(preimageMatches(current.preimage, current.paymentHash)).toBe(true);
+		// Credited only with the cryptographic proof of payment.
+		expect(preimageMatches(current.preimage ?? '', current.paymentHash)).toBe(true);
 
 		const entries = await listEntries(customer.id);
 		expect(entries.filter((entry) => entry.kind === 'payment_lightning')).toHaveLength(1);

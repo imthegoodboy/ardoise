@@ -4,7 +4,7 @@
 
 	const t = $derived(makeT(page.data.locale));
 	const href = $derived(
-		`/lang?to=${t('common.otherLangCode')}&next=${encodeURIComponent(page.url.pathname)}`
+		`/lang?to=${t('common.otherLangCode')}&next=${encodeURIComponent(page.url.pathname + page.url.search)}`
 	);
 </script>
 

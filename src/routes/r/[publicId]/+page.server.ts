@@ -32,7 +32,8 @@ export const load: PageServerLoad = async ({ params }) => {
 			paymentHash: invoice.paymentHash,
 			preimage: invoice.status === 'paid' ? invoice.preimage : null,
 			network,
-			testNetwork: network !== 'bc'
+			// Demo shops use play money even when the invoice format is mainnet (NWC faucet).
+			testNetwork: network !== 'bc' || shop.isDemo
 		}
 	};
 };

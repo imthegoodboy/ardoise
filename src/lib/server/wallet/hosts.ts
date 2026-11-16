@@ -2,6 +2,11 @@
  * The server opens a WebSocket to whatever relay a wallet connection names.
  * That address comes from user input, so it must never reach into the private
  * network the server itself lives on (SSRF).
+ *
+ * Checked when a wallet is connected, and again every time a connection to it
+ * is opened, so a hostname that later re-points to a private address (DNS
+ * rebinding) is refused at that point too. See THREAT_MODEL.md for what
+ * remains: the gap between our lookup and the socket's own.
  */
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
@@ -24,21 +29,58 @@ function isPrivateV4(ip: string): boolean {
 	);
 }
 
+/** Expand an IPv6 address to its eight 16-bit groups (embedded dotted IPv4 included). */
+function ipv6Groups(ip: string): number[] | null {
+	let text = ip.toLowerCase().replace(/%.*$/, '');
+	const dotted = text.match(/(\d+\.\d+\.\d+\.\d+)$/);
+	if (dotted) {
+		const [a, b, c, d] = dotted[1].split('.').map(Number);
+		text =
+			text.slice(0, -dotted[1].length) +
+			((a << 8) | b).toString(16) +
+			':' +
+			((c << 8) | d).toString(16);
+	}
+	const [head, tail] = text.split('::');
+	const left = head ? head.split(':') : [];
+	const right = tail !== undefined && tail ? tail.split(':') : [];
+	const missing = 8 - left.length - right.length;
+	if (tail === undefined ? left.length !== 8 : missing < 0) return null;
+	const groups = [...left, ...Array(tail === undefined ? 0 : missing).fill('0'), ...right].map(
+		(group) => parseInt(group, 16)
+	);
+	return groups.length === 8 && groups.every((g) => g >= 0 && g <= 0xffff) ? groups : null;
+}
+
+const v4From = (hi: number, lo: number) => `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`;
+
 export function isPrivateAddress(ip: string): boolean {
 	const kind = isIP(ip);
 	if (kind === 4) return isPrivateV4(ip);
 	if (kind !== 6) return true;
 
-	const lower = ip.toLowerCase();
-	const mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-	if (mapped) return isPrivateV4(mapped[1]);
+	const g = ipv6Groups(ip);
+	if (!g) return true;
+	const zeroPrefix = (n: number) => g.slice(0, n).every((x) => x === 0);
+
+	// Addresses that carry an IPv4 address inside them are judged by that address:
+	// ::ffff:a.b.c.d (mapped, also written ::ffff:7f00:1), ::a.b.c.d (compatible),
+	// and 64:ff9b::a.b.c.d (NAT64).
+	if (zeroPrefix(5) && g[5] === 0xffff) return isPrivateV4(v4From(g[6], g[7]));
+	if (zeroPrefix(6) && (g[6] !== 0 || g[7] > 1)) return isPrivateV4(v4From(g[6], g[7]));
+	if (g[0] === 0x64 && g[1] === 0xff9b && g.slice(2, 6).every((x) => x === 0)) {
+		return isPrivateV4(v4From(g[6], g[7]));
+	}
+
+	if (g.every((x) => x === 0)) return true; // ::
+	if (zeroPrefix(7) && g[7] === 1) return true; // ::1
+	const first = g[0];
 	return (
-		lower === '::' ||
-		lower === '::1' ||
-		lower.startsWith('fc') ||
-		lower.startsWith('fd') ||
-		/^fe[89ab]/.test(lower) ||
-		lower.startsWith('ff')
+		(first & 0xfe00) === 0xfc00 || // fc00::/7 unique local
+		(first & 0xffc0) === 0xfe80 || // fe80::/10 link local
+		(first & 0xffc0) === 0xfec0 || // fec0::/10 site local (deprecated)
+		(first & 0xff00) === 0xff00 || // ff00::/8 multicast
+		(first === 0x2001 && g[1] === 0x0db8) // documentation
 	);
 }
 
@@ -75,5 +117,14 @@ export async function assertPublicRelay(raw: string): Promise<void> {
 	}
 	if (!addresses.length || addresses.some((entry) => isPrivateAddress(entry.address))) {
 		throw new WalletError('bad_relay');
+	}
+}
+
+/** Relay URLs inside a stored connection string, for re-checking before each connection. */
+export function relaysOf(nwcUrl: string): string[] {
+	try {
+		return new URL(nwcUrl.replace(/^nostr\+walletconnect:/, 'https:')).searchParams.getAll('relay');
+	} catch {
+		return [];
 	}
 }
