@@ -34,8 +34,10 @@ export default defineConfig(
 		}
 	},
 	{
-		// Override or add rule settings here, such as:
-		// 'svelte/button-has-type': 'error'
-		rules: {}
+		rules: {
+			// Ardoise has no base path, so plain hrefs are already correct and
+			// readable; wrapping every link in resolve() adds noise, not safety.
+			'svelte/no-navigation-without-resolve': 'off'
+		}
 	}
 );
