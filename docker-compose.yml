@@ -1,0 +1,46 @@
+# One command: `docker compose up --build`, then open http://localhost:3000
+#
+# Optional settings go in a `.env` file next to this one (see .env.example):
+# GEMINI_API_KEY for notebook import, ARDOISE_DEMO_NWC_URL for a real-sats demo.
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ardoise
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ardoise-local}
+      POSTGRES_DB: ardoise
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ardoise -d ardoise']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    ports:
+      - '${PORT:-3000}:3000'
+    environment:
+      DATABASE_URL: postgres://ardoise:${POSTGRES_PASSWORD:-ardoise-local}@db:5432/ardoise
+      ORIGIN: ${ORIGIN:-http://localhost:3000}
+      # Without ARDOISE_SECRET, a random key is generated on first start and kept
+      # in the `data` volume below, never in this file.
+      ARDOISE_SECRET: ${ARDOISE_SECRET:-}
+      ARDOISE_PERSISTENT_DATA_DIR: 'true'
+      ARDOISE_DEMO: ${ARDOISE_DEMO:-faucet}
+      ARDOISE_DEMO_NWC_URL: ${ARDOISE_DEMO_NWC_URL:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ARDOISE_AI_MODEL: ${ARDOISE_AI_MODEL:-gemini-3.5-flash}
+      CRON_SECRET: ${CRON_SECRET:-}
+    volumes:
+      - data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  db:
+  data:

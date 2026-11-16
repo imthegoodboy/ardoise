@@ -73,7 +73,8 @@ export function masterSecret(): string {
 
 	// With an external database, a key file on a container's disk would vanish on
 	// the next deploy and take every sealed value with it. Refuse to start instead.
-	if (config.isProduction && config.databaseUrl) {
+	// (Docker Compose declares a persistent volume for the data dir, which is fine.)
+	if (config.isProduction && config.databaseUrl && !flag(env.ARDOISE_PERSISTENT_DATA_DIR)) {
 		throw new Error('ARDOISE_SECRET must be set in production when DATABASE_URL is used.');
 	}
 
