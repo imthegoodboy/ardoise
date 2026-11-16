@@ -1,0 +1,542 @@
+/*
+ * Ardoise design system.
+ *
+ * The page is the notebook: ruled lines and a margin, not cards.
+ * Orange fills always carry dark ink text (white on light orange fails contrast).
+ * Money figures use Atkinson Hyperlegible, drawn so 1, 7, 0 and 8 can't be
+ * confused on a scratched screen in sunlight.
+ */
+
+@font-face {
+	font-family: 'Atkinson Hyperlegible Next';
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url('./lib/assets/fonts/atkinson-400.woff2') format('woff2');
+}
+
+@font-face {
+	font-family: 'Atkinson Hyperlegible Next';
+	font-style: normal;
+	font-weight: 700;
+	font-display: swap;
+	src: url('./lib/assets/fonts/atkinson-700.woff2') format('woff2');
+}
+
+:root {
+	color-scheme: light;
+
+	/* Colour */
+	--paper: #ffffff;
+	--peel-soft: #fff4e6;
+	--peel: #ffe2bf;
+	--orange: #f7931a;
+	--orange-press: #e8850f;
+	--ember: #a8470b;
+	--ink: #26170b;
+	--ink-soft: #6b5646;
+	--rule: #f1dcc3;
+	--rule-strong: #e0bd94;
+	--margin-line: #fbbf77;
+	--paid: #1c7c4a;
+	--paid-wash: #e4f4ea;
+	--alert: #b3261e;
+	--alert-wash: #fcebe8;
+
+	/* Type */
+	--font: 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	--t-meta: 0.8125rem;
+	--t-small: 0.9375rem;
+	--t-body: 1.0625rem;
+	--t-lead: 1.25rem;
+	--t-title: 1.625rem;
+	--t-display: 2.25rem;
+	--t-amount: 2.875rem;
+
+	/* Space and shape */
+	--s-1: 0.25rem;
+	--s-2: 0.5rem;
+	--s-3: 0.75rem;
+	--s-4: 1rem;
+	--s-5: 1.5rem;
+	--s-6: 2rem;
+	--s-7: 3rem;
+	--r-control: 0.75rem;
+	--r-sheet: 1.375rem;
+	--tap: 3.25rem;
+	--page: 34rem;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+}
+
+body {
+	margin: 0;
+	background: var(--paper);
+	color: var(--ink);
+	font-family: var(--font);
+	font-size: var(--t-body);
+	line-height: 1.45;
+	-webkit-font-smoothing: antialiased;
+	-webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+p {
+	margin: 0;
+}
+
+h1,
+h2,
+h3 {
+	line-height: 1.12;
+	font-weight: 700;
+	text-wrap: balance;
+}
+
+p {
+	text-wrap: pretty;
+}
+
+a {
+	color: var(--ember);
+	text-underline-offset: 0.18em;
+}
+
+button,
+input,
+select,
+textarea {
+	font: inherit;
+	color: inherit;
+}
+
+:focus-visible {
+	outline: 3px solid var(--ink);
+	outline-offset: 2px;
+	border-radius: 4px;
+}
+
+::selection {
+	background: var(--peel);
+}
+
+/* Layout */
+
+.page {
+	width: 100%;
+	max-width: var(--page);
+	margin-inline: auto;
+	padding-inline: var(--s-4);
+}
+
+.stack > * + * {
+	margin-block-start: var(--stack, var(--s-4));
+}
+
+.band {
+	background: var(--peel);
+}
+
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+/* Money */
+
+.num {
+	font-variant-numeric: tabular-nums;
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+.muted {
+	color: var(--ink-soft);
+}
+
+.small {
+	font-size: var(--t-small);
+}
+
+.meta {
+	font-size: var(--t-meta);
+	color: var(--ink-soft);
+}
+
+/* Buttons */
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--s-2);
+	min-height: var(--tap);
+	padding: 0 var(--s-5);
+	border: 0;
+	border-radius: var(--r-control);
+	background: var(--orange);
+	color: var(--ink);
+	font-weight: 700;
+	font-size: var(--t-body);
+	line-height: 1.15;
+	text-align: center;
+	text-decoration: none;
+	cursor: pointer;
+	touch-action: manipulation;
+	user-select: none;
+}
+
+.btn:active {
+	background: var(--orange-press);
+	transform: translateY(1px);
+}
+
+.btn[disabled],
+.btn[aria-disabled='true'] {
+	opacity: 0.55;
+	cursor: default;
+}
+
+.btn-wide {
+	width: 100%;
+}
+
+.btn-quiet {
+	background: var(--peel-soft);
+	box-shadow: inset 0 0 0 1.5px var(--rule-strong);
+}
+
+.btn-quiet:active {
+	background: var(--peel);
+}
+
+.btn-plain {
+	background: none;
+	color: var(--ember);
+	text-decoration: underline;
+	text-underline-offset: 0.18em;
+	padding-inline: var(--s-3);
+}
+
+.btn-plain:active {
+	background: var(--peel-soft);
+}
+
+.btn-danger {
+	background: var(--alert-wash);
+	color: var(--alert);
+	box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
+.btn-danger:active {
+	background: #f8d6d1;
+}
+
+.btn-small {
+	min-height: 2.75rem;
+	padding-inline: var(--s-4);
+	font-size: var(--t-small);
+}
+
+.icon-btn {
+	display: inline-grid;
+	place-items: center;
+	width: 3rem;
+	height: 3rem;
+	border: 0;
+	border-radius: 50%;
+	background: none;
+	color: var(--ink);
+	cursor: pointer;
+	text-decoration: none;
+}
+
+.icon-btn:active {
+	background: rgb(38 23 11 / 0.08);
+}
+
+/* Forms */
+
+.field {
+	display: block;
+}
+
+.field > label,
+.field > .label {
+	display: block;
+	font-weight: 700;
+	font-size: var(--t-small);
+	padding-block: 0 var(--s-2);
+}
+
+.field .hint {
+	display: block;
+	font-size: var(--t-meta);
+	color: var(--ink-soft);
+	padding-block-start: var(--s-2);
+}
+
+.input {
+	display: block;
+	width: 100%;
+	min-height: var(--tap);
+	padding: var(--s-3) var(--s-4);
+	border: 1.5px solid var(--rule-strong);
+	border-radius: var(--r-control);
+	background: var(--paper);
+	font-size: max(1rem, var(--t-body));
+}
+
+.input::placeholder {
+	color: #9a8676;
+}
+
+.input:focus-visible {
+	outline: 3px solid var(--orange);
+	outline-offset: 0;
+	border-color: var(--ink);
+	border-radius: var(--r-control);
+}
+
+.input:user-invalid {
+	border-color: var(--alert);
+	background: var(--alert-wash);
+}
+
+textarea.input {
+	min-height: 7rem;
+	resize: vertical;
+}
+
+.input-amount {
+	font-size: var(--t-display);
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	text-align: end;
+	padding-inline-end: 3.25rem;
+}
+
+.amount-wrap {
+	position: relative;
+}
+
+.amount-wrap > .unit {
+	position: absolute;
+	inset-inline-end: var(--s-4);
+	inset-block-end: 0.8rem;
+	font-weight: 700;
+	font-size: var(--t-lead);
+	color: var(--ink-soft);
+	pointer-events: none;
+}
+
+/* Messages */
+
+.note {
+	padding: var(--s-3) var(--s-4);
+	border-radius: var(--r-control);
+	background: var(--peel-soft);
+	border-inline-start: 4px solid var(--orange);
+}
+
+.note-error {
+	background: var(--alert-wash);
+	border-inline-start-color: var(--alert);
+	color: #7a1a14;
+}
+
+.note-ok {
+	background: var(--paid-wash);
+	border-inline-start-color: var(--paid);
+	color: #0f4d2c;
+}
+
+/* The ledger: ruled lines, a margin, amounts on the right */
+
+.ledger {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	border-block-start: 1px solid var(--rule);
+	background: linear-gradient(var(--margin-line), var(--margin-line)) no-repeat 4.25rem 0 / 1.5px
+		100%;
+}
+
+.ledger > li {
+	position: relative;
+	display: grid;
+	grid-template-columns: 4.25rem minmax(0, 1fr) auto;
+	align-items: baseline;
+	min-height: 3rem;
+	padding-block: 0.7rem;
+	border-block-end: 1px solid var(--rule);
+}
+
+.ledger .when {
+	font-size: var(--t-meta);
+	color: var(--ink-soft);
+	padding-inline-end: var(--s-2);
+}
+
+.ledger .what {
+	padding-inline: var(--s-3) var(--s-2);
+	overflow-wrap: anywhere;
+}
+
+.ledger .sum {
+	font-variant-numeric: tabular-nums;
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+.ledger .payment .what,
+.ledger .payment .sum {
+	color: var(--paid);
+}
+
+/* A settled purchase is crossed out, the way a shopkeeper strikes a paid line. */
+.ledger .settled .what,
+.ledger .settled .sum {
+	color: var(--ink-soft);
+}
+
+.ledger .settled::after {
+	content: '';
+	position: absolute;
+	inset-inline: 4.75rem 0;
+	inset-block-start: 50%;
+	height: 1.5px;
+	background: var(--ink-soft);
+	transform-origin: left center;
+}
+
+.ledger .just-settled::after {
+	animation: strike 420ms cubic-bezier(0.3, 0.7, 0.2, 1) both;
+	animation-delay: calc(var(--i, 0) * 110ms + 250ms);
+}
+
+@keyframes strike {
+	from {
+		transform: scaleX(0);
+	}
+	to {
+		transform: scaleX(1);
+	}
+}
+
+/* Bottom sheet built on <dialog> */
+
+dialog.sheet {
+	width: 100%;
+	max-width: var(--page);
+	max-height: 92dvh;
+	margin: auto auto 0;
+	padding: var(--s-5) var(--s-4) calc(var(--s-5) + env(safe-area-inset-bottom));
+	border: 0;
+	border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+	background: var(--paper);
+	color: var(--ink);
+	box-shadow: 0 -8px 40px rgb(38 23 11 / 0.18);
+}
+
+dialog.sheet:modal {
+	overscroll-behavior: contain;
+}
+
+dialog.sheet::backdrop {
+	background: rgb(38 23 11 / 0.5);
+	overflow: hidden;
+	overscroll-behavior: contain;
+}
+
+dialog.sheet[open] {
+	animation: sheet-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes sheet-in {
+	from {
+		transform: translateY(24px);
+		opacity: 0;
+	}
+}
+
+.sheet-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--s-3);
+	margin-block-end: var(--s-4);
+}
+
+.sheet-head h2 {
+	font-size: var(--t-lead);
+}
+
+@media (min-width: 40rem) {
+	dialog.sheet {
+		margin: auto;
+		border-radius: var(--r-sheet);
+	}
+}
+
+/* Sticky action bar at the bottom of a screen */
+
+.dock {
+	position: sticky;
+	inset-block-end: 0;
+	display: flex;
+	gap: var(--s-3);
+	padding: var(--s-3) var(--s-4) calc(var(--s-3) + env(safe-area-inset-bottom));
+	background: linear-gradient(to top, var(--paper) 78%, rgb(255 255 255 / 0));
+}
+
+.dock > * {
+	flex: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 1ms !important;
+		animation-delay: 0ms !important;
+		transition-duration: 1ms !important;
+	}
+}
+
+@media print {
+	.no-print {
+		display: none !important;
+	}
+}
+
+/* Scroll reveal (see #lib/reveal.ts). Hidden only once JavaScript has taken charge. */
+
+.reveal {
+	opacity: 0;
+	translate: 0 18px;
+	transition:
+		opacity 600ms ease,
+		translate 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+	transition-delay: var(--reveal-delay, 0ms);
+}
+
+.reveal.in {
+	opacity: 1;
+	translate: 0 0;
+}
