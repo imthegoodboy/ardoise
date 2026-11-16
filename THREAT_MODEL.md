@@ -62,7 +62,9 @@ how, and what we knowingly leave open.
 - PIN: 6 digits, obvious ones refused (`123456`, `111111`, `121212`, `123123`, `987654`…), scrypt with per-hash
   salt and a server pepper. Five tries per phone per 15 minutes, **counted before verification** so
   parallel guesses cannot exceed it (tested with 12 concurrent attempts); 30 attempts per client.
-- Errors do not reveal whether a phone number has an account; unknown numbers cost the same scrypt.
+- Sign-in errors do not reveal whether a phone number has an account; unknown numbers cost the
+  same scrypt. Sign-up does say a number is taken (a shopkeeper must be told to sign in instead);
+  it is rate-limited per client, which makes enumeration slow.
 - Sessions: 256-bit random tokens, stored as SHA-256, `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS,
   60-day sliding expiry. Changing the PIN signs out every other device.
 - Sensitive changes (wallet, delete) ask for the PIN again.
@@ -112,7 +114,8 @@ how, and what we knowingly leave open.
   the BOLT11 payee key against the node.
 - A 6-digit PIN on a stolen, unlocked phone with an active session gives access to the book, like the
   paper notebook it replaces. Sessions can be revoked from another device.
-- Demo shops use play-money sats and are deleted after 24 hours.
+- Demo shops use play-money sats and are deleted after 24 hours by the housekeeping job. In faucet
+  mode their test wallet can also spend its play money; real wallets connected by shops cannot.
 
 ## Reporting
 

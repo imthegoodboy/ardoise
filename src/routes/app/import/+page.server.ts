@@ -9,9 +9,16 @@ import { log } from '#lib/server/log.ts';
 import { clientKey, hit } from '#lib/server/ratelimit.ts';
 import { cleanText } from '#lib/server/validate.ts';
 import type { Actions, PageServerLoad } from './$types';
+import type { Config } from '@sveltejs/adapter-vercel';
 
-const MAX_PHOTO_BYTES = 6 * 1024 * 1024;
+/** On Vercel: Reading a page with Gemini can take a while. */
+export const config: Config = { maxDuration: 90 };
+
+const MAX_PHOTO_BYTES = 4 * 1024 * 1024;
 const READ_LIMIT = { max: 20, windowSeconds: 3600 };
+/** Demo shops are free to create, so their reads are capped harder, and per visitor too. */
+const DEMO_READ_LIMIT = { max: 5, windowSeconds: 3600 };
+const CLIENT_READ_LIMIT = { max: 30, windowSeconds: 3600 };
 const TYPES: ImageType[] = ['image/jpeg', 'image/png', 'image/webp'];
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -48,8 +55,14 @@ export const actions: Actions = {
 		const mediaType = TYPES.find((type) => type === photo.type);
 		if (!mediaType) return fail(415, { readError: 'failed' as const });
 
-		const limit = await hit(clientKey('ai-import', shop.id), READ_LIMIT);
-		if (!limit.allowed) return fail(429, { readError: 'slow_down' as const });
+		const perShop = await hit(
+			clientKey('ai-import', shop.id),
+			shop.isDemo ? DEMO_READ_LIMIT : READ_LIMIT
+		);
+		const perClient = await hit(clientKey('ai-import-client', locals.client), CLIENT_READ_LIMIT);
+		if (!perShop.allowed || !perClient.allowed) {
+			return fail(429, { readError: 'slow_down' as const });
+		}
 
 		const data = Buffer.from(await photo.arrayBuffer()).toString('base64');
 		const result = await readNotebookPage({ data, mediaType });

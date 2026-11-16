@@ -3,9 +3,12 @@
  *
  * Each entry carries its own id, and the server ignores an id it has already
  * stored, so sending the outbox twice (two tabs, a flaky reconnect) is safe.
+ * Each entry also carries its shop: lines written for one shop are only ever
+ * sent from that shop's session, never lost because another one signed in.
  */
 export interface OutboxEntry {
 	id: string;
+	shopId: string;
 	customerId: string;
 	kind: 'purchase' | 'payment_cash';
 	amountXof: number;
@@ -49,9 +52,10 @@ export function onOutboxChange(listener: () => void): () => void {
 	return () => listeners.delete(listener);
 }
 
-export function queued(customerId?: string): OutboxEntry[] {
-	const entries = read();
-	return customerId ? entries.filter((entry) => entry.customerId === customerId) : entries;
+export function queued(shopId: string, customerId?: string): OutboxEntry[] {
+	return read().filter(
+		(entry) => entry.shopId === shopId && (!customerId || entry.customerId === customerId)
+	);
 }
 
 /** On sign-out: forget unsent lines and the offline copy of the book on this phone. */
@@ -68,11 +72,14 @@ type SendResult = 'sent' | 'queued' | 'rejected' | 'signed_out';
 
 async function post(entry: OutboxEntry): Promise<SendResult> {
 	let response: Response;
+	// The shop is known from the session; only the line itself is sent.
+	const { shopId, ...line } = entry;
+	void shopId;
 	try {
 		response = await fetch('/api/entries', {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify(entry),
+			body: JSON.stringify(line),
 			signal: AbortSignal.timeout(12_000)
 		});
 	} catch {
@@ -80,8 +87,10 @@ async function post(entry: OutboxEntry): Promise<SendResult> {
 	}
 	if (response.ok) return 'sent';
 	if (response.status === 401) return 'signed_out';
-	if (response.status >= 500 || response.status === 429) return 'queued';
-	return 'rejected';
+	// Only a definite "no" drops a line: a malformed entry (400), or a tab that
+	// no longer exists in this shop (404). Anything else is retried later.
+	if (response.status === 400 || response.status === 404) return 'rejected';
+	return 'queued';
 }
 
 /** Send one entry now; keep it for later if the network is not there. */
@@ -96,11 +105,11 @@ export async function send(entry: OutboxEntry): Promise<SendResult> {
 
 let flushing: Promise<number> | null = null;
 
-/** Try to send everything waiting. Returns how many entries were delivered. */
-export function flush(): Promise<number> {
+/** Try to send everything this shop has waiting. Returns how many entries were delivered. */
+export function flush(shopId: string): Promise<number> {
 	flushing ??= (async () => {
 		let delivered = 0;
-		for (const entry of read()) {
+		for (const entry of queued(shopId)) {
 			const result = await post(entry);
 			if (result === 'queued' || result === 'signed_out') break;
 			write(read().filter((existing) => existing.id !== entry.id));

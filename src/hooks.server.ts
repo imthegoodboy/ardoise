@@ -1,13 +1,12 @@
 import { redirect } from '@sveltejs/kit';
 import type { Handle, HandleServerError, ServerInit } from '@sveltejs/kit/hooks';
 import type { Locale } from '#lib/money.ts';
-import { SESSION_COOKIE, readSession, sweepSessions } from '#lib/server/auth.ts';
+import { SESSION_COOKIE, readSession } from '#lib/server/auth.ts';
+import { housekeeping, inBackground, tick } from '#lib/server/background.ts';
 import { config } from '#lib/server/config.ts';
 import { getDb } from '#lib/server/db/index.ts';
 import { migrate } from '#lib/server/db/migrate.ts';
-import { reconcile } from '#lib/server/invoices.ts';
 import { describeError, log } from '#lib/server/log.ts';
-import { sweep } from '#lib/server/ratelimit.ts';
 import { LOCALE_COOKIE, setSessionCookie } from '#lib/server/session.ts';
 
 export const init: ServerInit = async () => {
@@ -15,13 +14,13 @@ export const init: ServerInit = async () => {
 	if (applied.length) log.info('db.migrated', { applied: applied.join(',') });
 	log.info('server.ready', { demo: config.demo, db: (await getDb()).kind });
 
-	// A long-running server checks unwatched invoices itself. Serverless hosts
-	// call /api/cron/reconcile on a schedule instead.
+	// A long-running server checks unwatched invoices itself every minute.
+	// Serverless hosts rely on the cron endpoint and on request-driven ticks.
 	if (!process.env.VERCEL && !config.isTest) {
 		const timer = setInterval(() => {
-			reconcile({ limit: 50 })
-				.then(() => Promise.all([sweep(), sweepSessions()]))
-				.catch((err) => log.warn('reconcile.failed', { reason: describeError(err) }));
+			housekeeping(50).catch((err) =>
+				log.warn('housekeeping.failed', { reason: describeError(err) })
+			);
 		}, 60_000);
 		timer.unref();
 	}
@@ -38,8 +37,12 @@ function pickLocale(
 	return first.startsWith('en') ? 'en' : 'fr';
 }
 
-/** Pages behind the shop's PIN. Everything else is public. */
+/**
+ * Routes behind the shop's PIN, matched on SvelteKit's route id rather than the
+ * raw URL, so an encoded path (`/%61pp/export`) cannot slip past the guard.
+ */
 const PRIVATE = /^\/(app)(\/|$)|^\/api\/(entries|activity)(\/|$)/;
+const PUBLIC_MONEY = /^\/(p|r)\//;
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const started = performance.now();
@@ -72,12 +75,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 		event.request.headers.get('accept-language')
 	);
 
-	const path = event.url.pathname;
-	if (PRIVATE.test(path) && !event.locals.shop) {
-		if (path.startsWith('/api/')) {
+	const routeId = event.route.id ?? '';
+	if (PRIVATE.test(routeId) && !event.locals.shop) {
+		if (routeId.startsWith('/api/')) {
 			return Response.json({ error: 'signed_out' }, { status: 401 });
 		}
-		const next = event.request.method === 'GET' ? path : '/app';
+		const next = event.request.method === 'GET' ? event.url.pathname : '/app';
 		redirect(303, '/login?next=' + encodeURIComponent(next));
 	}
 
@@ -97,23 +100,20 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (config.isProduction) {
 		headers.set('strict-transport-security', 'max-age=31536000; includeSubDomains');
 	}
-	if (
-		event.locals.shop ||
-		path.startsWith('/p/') ||
-		path.startsWith('/r/') ||
-		path.startsWith('/api/')
-	) {
+	const money = PUBLIC_MONEY.test(routeId) || PUBLIC_MONEY.test(event.url.pathname);
+	if (event.locals.shop || money || routeId.startsWith('/api/')) {
 		headers.set('cache-control', 'private, no-store');
 	}
 	// Pay links and receipts must never show up in a search engine.
-	if (path.startsWith('/p/') || path.startsWith('/r/')) {
-		headers.set('x-robots-tag', 'noindex, nofollow');
-	}
+	if (money) headers.set('x-robots-tag', 'noindex, nofollow');
+
+	// Any traffic keeps unwatched payments moving (at most once a minute).
+	if (!config.isTest && routeId !== '/api/health') inBackground(tick());
 
 	// Route ids only: a URL can contain a pay token.
 	log.info('http', {
 		method: event.request.method,
-		route: event.route.id ?? '(none)',
+		route: routeId || '(none)',
 		status: response.status,
 		ms: Math.round(performance.now() - started)
 	});

@@ -1,0 +1,8 @@
+.env
+.env.*
+!.env.example
+.data*
+.playwright-mcp
+build
+.svelte-kit
+node_modules

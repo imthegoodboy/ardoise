@@ -8,16 +8,28 @@ import {
 } from '#lib/server/auth.ts';
 import { log } from '#lib/server/log.ts';
 import { endSession, setLocaleCookie, startSession } from '#lib/server/session.ts';
+import { listAllCustomers, setArchived } from '#lib/server/customers.ts';
 import { deleteShop, updateShop } from '#lib/server/shops.ts';
-import { cleanText } from '#lib/server/validate.ts';
+import { cleanText, isUuid } from '#lib/server/validate.ts';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = ({ locals }) => {
+export const load: PageServerLoad = async ({ locals }) => {
 	const shop = locals.shop!;
-	return { settings: { name: shop.name, place: shop.place, locale: shop.locale } };
+	const archived = (await listAllCustomers(shop.id))
+		.filter((customer) => customer.archived)
+		.map((customer) => ({ id: customer.id, name: customer.name }));
+	return { settings: { name: shop.name, place: shop.place, locale: shop.locale }, archived };
 };
 
 export const actions: Actions = {
+	restore: async ({ request, locals }) => {
+		const form = await request.formData();
+		const id = form.get('customerId');
+		if (!isUuid(id)) return fail(400, { restoreError: true });
+		await setArchived(locals.shop!.id, id, false);
+		return { restored: true };
+	},
+
 	shop: async ({ request, locals, cookies }) => {
 		const shop = locals.shop!;
 		const form = await request.formData();

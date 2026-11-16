@@ -30,6 +30,7 @@
 	const offline = $derived(invoice.rateSources.includes('offline-fallback'));
 
 	let copied = $state(false);
+	let gone = $state(false);
 	let busy = $state(false);
 
 	// WebLN: a Lightning wallet living in the browser (Alby and others) can pay
@@ -70,12 +71,17 @@
 		webln = (window as unknown as { webln?: WebLN }).webln ?? null;
 		const tick = setInterval(() => (now = Date.now()), 1000);
 		const poll = setInterval(async () => {
-			if (data.invoice.status === 'paid' || document.visibilityState !== 'visible') return;
+			if (gone || data.invoice.status === 'paid' || document.visibilityState !== 'visible') return;
 			try {
 				const response = await fetch(
 					`/api/pay/${page.params.token}/invoices/${page.params.publicId}`,
 					{ signal: AbortSignal.timeout(10_000) }
 				);
+				// The shop replaced or removed this link while the payer was here.
+				if (response.status === 404) {
+					gone = true;
+					return;
+				}
 				if (!response.ok) return;
 				const state = await response.json();
 				if (state.status !== data.invoice.status) await invalidate('pay:invoice');
@@ -117,6 +123,8 @@
 			</a>
 			<a class="btn btn-quiet btn-wide" href="/p/{page.params.token}">{t('invoice.back')}</a>
 		</section>
+	{:else if gone}
+		<p class="note note-error" role="alert">{t('invoice.gone')}</p>
 	{:else if expired}
 		<section class="stack" style:--stack="var(--s-3)">
 			<h1>{t('invoice.title')}</h1>

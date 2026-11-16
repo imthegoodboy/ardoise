@@ -112,7 +112,12 @@ sequenceDiagram
   unique index; at most one pending invoice per tab, amount and wallet. Retries are always safe.
 - **Two databases, one SQL.** Postgres in production, PGlite (Postgres in WebAssembly) for local runs
   and tests, so tests exercise the real SQL, including concurrency.
-- **Server-rendered, progressively enhanced.** Every core action works as a plain HTML form; the
-  JavaScript adds sheets, offline queueing and live updates.
+- **Server-rendered, progressively enhanced.** The core path works as plain HTML forms: sign-up,
+  sign-in, writing a purchase, paying a tab, reading a notebook page. JavaScript adds the sheets
+  (cash payments, corrections, sharing), offline queueing and live updates.
+- **Late payments are never lost.** An invoice is checked for 72 hours after it expires and is
+  never marked expired without one last question to the wallet. Checks run from the payer's page,
+  the shop's pages, a once-a-minute tick driven by any traffic (`background.ts`, kept alive with
+  `waitUntil` on Vercel), and the cron.
 - **FCFA first.** The shop thinks in francs; sats are an implementation detail shown to payers, and
   euros are shown because the diaspora thinks in them.

@@ -27,11 +27,11 @@
 	let waiting = $state(0);
 
 	async function sync() {
-		const before = queued().length;
+		const before = queued(data.shop.id).length;
 		if (!before) return;
-		await flush();
+		await flush(data.shop.id);
 		// Refresh whenever the queue shrank: delivered lines appear, rejected ones vanish.
-		if (queued().length < before) await invalidateAll();
+		if (queued(data.shop.id).length < before) await invalidateAll();
 	}
 
 	// --- "Moussa paid 12 550 F for Awa": announced wherever the shopkeeper is
@@ -43,11 +43,27 @@
 		payerName: string | null;
 	}
 	let toasts = $state<Payment[]>([]);
+	// Server clock of the last check, remembered per shop so the next visit also
+	// announces what was paid while the app was closed.
+	const sinceKey = () => `ardoise.activity.${data.shop.id}`;
 	let since: number | null = null;
+	// Bookkeeping only, never rendered: a plain Set is right here.
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity
+	const announced = new Set<string>();
+
+	function remembered(): number | null {
+		try {
+			const value = Number(localStorage.getItem(sinceKey()));
+			return value > 0 ? value : null;
+		} catch {
+			return null;
+		}
+	}
 
 	async function listen() {
 		if (document.visibilityState !== 'visible' || !navigator.onLine) return;
 		try {
+			since ??= remembered();
 			const query = since === null ? '' : `?since=${since}`;
 			const response = await fetch(`/api/activity${query}`, {
 				signal: AbortSignal.timeout(10_000)
@@ -55,7 +71,14 @@
 			if (!response.ok) return;
 			const body: { now: number; payments: Payment[] } = await response.json();
 			since = body.now;
-			const fresh = body.payments.filter((p) => !toasts.some((t) => t.entryId === p.entryId));
+			try {
+				localStorage.setItem(sinceKey(), String(body.now));
+			} catch {
+				// Not remembered: only this visit's payments are announced.
+			}
+			// The server overlaps windows on purpose; each payment is announced once.
+			const fresh = body.payments.filter((p) => !announced.has(p.entryId));
+			for (const payment of fresh) announced.add(payment.entryId);
 			if (!fresh.length) return;
 			toasts = [...fresh, ...toasts].slice(0, 3);
 			navigator.vibrate?.([60, 40, 60]);
@@ -74,8 +97,8 @@
 
 	onMount(() => {
 		online = navigator.onLine;
-		waiting = queued().length;
-		const stop = onOutboxChange(() => (waiting = queued().length));
+		waiting = queued(data.shop.id).length;
+		const stop = onOutboxChange(() => (waiting = queued(data.shop.id).length));
 		const up = () => {
 			online = true;
 			sync();
@@ -88,7 +111,7 @@
 		const timer = setInterval(() => {
 			listen();
 			// A flush that failed once is retried while lines are waiting.
-			if (navigator.onLine && queued().length) sync();
+			if (navigator.onLine && queued(data.shop.id).length) sync();
 		}, 8_000);
 		return () => {
 			stop();

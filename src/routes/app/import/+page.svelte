@@ -22,7 +22,22 @@
 		unsure: boolean;
 	}
 
-	let rows = $state<Row[]>([]);
+	// Without JavaScript the read comes back as a normal form result: show it.
+	// svelte-ignore state_referenced_locally
+	let rows = $state<Row[]>(
+		form && 'lines' in form && Array.isArray(form.lines)
+			? form.lines.map((line) => ({
+					id: uuid(),
+					keep: !line.crossedOut,
+					customer: line.customer,
+					item: line.item,
+					amount: String(line.amountXof),
+					date: line.date ?? '',
+					kind: line.kind,
+					unsure: line.unsure
+				}))
+			: []
+	);
 	let reading = $state(false);
 	let readError = $state('');
 	let added = $state<number | null>(null);
@@ -218,7 +233,12 @@
 								inputmode="numeric"
 								bind:value={row.amount}
 							/>
-							<input class="input" type="date" aria-label="Date" bind:value={row.date} />
+							<input
+								class="input"
+								type="date"
+								aria-label={t('import.date')}
+								bind:value={row.date}
+							/>
 						</div>
 						{#if row.kind === 'payment_cash'}<span class="tag paid">{t('tab.paidCash')}</span>{/if}
 					</div>

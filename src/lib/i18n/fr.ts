@@ -1,6 +1,5 @@
 /** French is the reference: every key here must exist in every other language. */
 export const fr = {
-	'app.name': 'Ardoise',
 	'app.tagline': 'Le cahier de crédit de la boutique',
 
 	'nav.book': 'Cahier',
@@ -11,9 +10,7 @@ export const fr = {
 
 	'common.back': 'Retour',
 	'common.close': 'Fermer',
-	'common.cancel': 'Annuler',
 	'common.save': 'Enregistrer',
-	'common.copy': 'Copier',
 	'common.copied': 'Copié',
 	'common.login': 'Se connecter',
 	'common.logout': 'Se déconnecter',
@@ -23,7 +20,6 @@ export const fr = {
 	'common.optional': 'facultatif',
 	'common.offline': 'Pas de réseau. Ce que vous notez sera envoyé au retour de la connexion.',
 	'common.queued': '{n} ligne(s) en attente d’envoi',
-	'common.today': 'aujourd’hui',
 	'common.notFound': 'Page introuvable',
 	'common.home': 'Accueil',
 
@@ -116,6 +112,7 @@ export const fr = {
 	'signup.language': 'Langue',
 	'signup.submit': 'Ouvrir mon cahier',
 	'signup.haveAccount': 'Déjà un cahier ?',
+	'signup.pinAgain': 'Le même code, encore une fois',
 
 	'login.title': 'Ouvrir mon cahier',
 	'login.phone': 'Numéro de téléphone',
@@ -134,6 +131,7 @@ export const fr = {
 	'error.locked': 'Trop d’essais. Réessayez dans {minutes} min.',
 	'error.pin_wrong': 'Code secret incorrect.',
 	'error.limit_invalid': 'Le plafond doit être un montant en francs, par exemple 20 000.',
+	'error.pin_mismatch': 'Les deux codes ne sont pas identiques.',
 
 	'book.title': 'Cahier',
 	'book.owed': 'On vous doit',
@@ -171,8 +169,9 @@ export const fr = {
 	'demo.wallet.real':
 		'Elle est reliée à un vrai portefeuille Lightning : les paiements sont de vrais sats.',
 	'demo.enter': 'Entrer dans la boutique',
-	'demo.off': 'La démo n’est pas activée sur ce serveur.',
 	'demo.expires': 'Boutique de démonstration, effacée après 24 heures.',
+	'demo.signedInWarning':
+		'Vous êtes connecté à votre boutique. Entrer dans la démo vous déconnecte de celle-ci.',
 
 	'customer.new.title': 'Nouveau client',
 	'customer.edit.title': 'Modifier le client',
@@ -186,7 +185,8 @@ export const fr = {
 	'customer.archive': 'Retirer du cahier',
 	'customer.archiveHint':
 		'Son lien de paiement cessera de fonctionner. L’historique est conservé dans l’export.',
-	'customer.saved': 'Enregistré.',
+	'customer.archiveConfirm': 'Oui, retirer {name} du cahier',
+	'customer.restore': 'Remettre dans le cahier',
 
 	'tab.owes': 'Doit',
 	'tab.ahead': 'En avance de',
@@ -204,7 +204,6 @@ export const fr = {
 	'tab.pending': 'en attente d’envoi',
 	'tab.voided': 'rayé',
 	'tab.waiting': 'Paiement en cours : {amount}',
-	'tab.call': 'Appeler',
 	'tab.edit': 'Modifier',
 	'tab.lines': 'Lignes de l’ardoise',
 
@@ -228,7 +227,6 @@ export const fr = {
 	'add.overLimit': 'Attention : ce client dépassera son plafond de {limit}.',
 	'add.queued': 'Pas de réseau : la ligne partira au retour de la connexion.',
 	'add.cashLabel': 'Espèces',
-	'add.clear': 'Effacer',
 
 	'share.title': 'Envoyer l’ardoise',
 	'share.message':
@@ -291,6 +289,8 @@ export const fr = {
 	'wallet.why': 'Pourquoi « recevoir seulement » ?',
 	'wallet.whyBody':
 		'Une clé qui peut dépenser n’a rien à faire sur un serveur. Si quelqu’un volait la base de données d’Ardoise, il ne trouverait rien à dépenser.',
+	'wallet.faucetPerms':
+		'Portefeuille de test : il peut aussi dépenser ses sats fictifs. Un vrai portefeuille connecté ici ne le pourrait pas.',
 
 	'settings.title': 'Réglages',
 	'settings.shop': 'Votre boutique',
@@ -311,6 +311,11 @@ export const fr = {
 	'settings.privacy': 'Vos données',
 	'settings.privacyBody':
 		'Les noms et numéros de vos clients sont chiffrés. Votre numéro n’est gardé que sous forme d’empreinte. Rien n’est vendu ni partagé.',
+	'settings.archived': 'Clients retirés',
+	'settings.archivedHint':
+		'Leur historique est conservé. Remettez-les dans le cahier à tout moment.',
+	'settings.unsent':
+		'{n} ligne(s) pas encore envoyée(s) seront perdues si vous vous déconnectez maintenant.',
 
 	'import.title': 'Importer une page du cahier',
 	'import.lead':
@@ -340,9 +345,9 @@ export const fr = {
 	'import.tooBig': 'Photo trop lourde. Réessayez.',
 	'import.another': 'Importer une autre page',
 	'import.saveFailed': 'Ces lignes n’ont pas pu être ajoutées. Vérifiez les montants et réessayez.',
+	'import.date': 'Date',
 
 	'pay.title': 'L’ardoise de {name}',
-	'pay.at': 'chez {shop}',
 	'pay.due': 'Reste à payer',
 	'pay.nothingDue': 'Rien à payer pour l’instant. Merci !',
 	'pay.ahead': '{amount} payés d’avance',
@@ -370,6 +375,9 @@ export const fr = {
 	'pay.error.not_found': 'Ce lien ne fonctionne plus. Demandez le nouveau à la boutique.',
 	'pay.notFoundTitle': 'Lien introuvable',
 	'pay.since': 'depuis le {date}',
+	'pay.gone.title': 'Ce lien a été remplacé',
+	'pay.gone.body':
+		'La boutique a créé un nouveau lien pour cette ardoise, ou l’a retirée du cahier. Demandez-lui le nouveau lien.',
 
 	'invoice.title': 'Scannez pour payer',
 	'invoice.open': 'Ouvrir dans mon portefeuille',
@@ -397,6 +405,8 @@ export const fr = {
 		'Démo : facture d’un portefeuille de test NWC, payable seulement avec les sats fictifs du faucet.',
 	'invoice.back': 'Retour à l’ardoise',
 	'invoice.qrLabel': 'QR code de la facture Lightning',
+	'invoice.gone':
+		'Ce lien de paiement ne fonctionne plus. Si vous avez déjà payé, la boutique a bien reçu l’argent : demandez-lui le nouveau lien.',
 
 	'receipt.title': 'Reçu de paiement',
 	'receipt.shop': 'Boutique',
@@ -416,6 +426,7 @@ export const fr = {
 	'receipt.print': 'Imprimer',
 	'receipt.demo': 'Reçu de démonstration : paiement en sats de test.',
 	'receipt.notPaid': 'Ce paiement n’est pas encore confirmé.',
+	'receipt.fromInvoice': 'Empreinte lue dans la facture Lightning elle-même',
 	'receipt.network': 'Réseau'
 } satisfies Record<string, string>;
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { sha256 } from '@noble/hashes/sha2.js';
 	import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
+	import { decode } from 'light-bolt11-decoder';
 	import Icon from '#lib/components/Icon.svelte';
 	import PublicFrame from '#lib/components/PublicFrame.svelte';
 	import { clockTime, longDate } from '#lib/dates.ts';
@@ -25,11 +26,20 @@
 
 	// Done with a bundled hash function rather than crypto.subtle, which is
 	// missing on plain-http pages: the check must work on any phone.
+	let fromInvoice = $state('');
+
+	/**
+	 * The check does not trust this server: the payment hash is read from the
+	 * Lightning invoice itself (signed by the shop's wallet), then compared with
+	 * the SHA-256 of the preimage, all in this browser.
+	 */
 	function verify() {
 		if (!r.preimage) return;
 		try {
+			const section = decode(r.bolt11).sections.find((s) => s.name === 'payment_hash');
+			fromInvoice = section && 'value' in section ? String(section.value) : '';
 			computed = bytesToHex(sha256(hexToBytes(r.preimage)));
-			verdict = computed === r.paymentHash.toLowerCase() ? 'match' : 'mismatch';
+			verdict = fromInvoice && computed === fromInvoice.toLowerCase() ? 'match' : 'mismatch';
 		} catch {
 			verdict = 'mismatch';
 		}
@@ -103,6 +113,11 @@
 				{/if}
 				{#if computed}
 					<p class="meta">SHA-256(preimage) = <code class="inline">{computed}</code></p>
+					{#if fromInvoice}
+						<p class="meta">
+							{t('receipt.fromInvoice')} : <code class="inline">{fromInvoice}</code>
+						</p>
+					{/if}
 				{/if}
 			{:else}
 				<p class="note">{t('receipt.noProof')}</p>
