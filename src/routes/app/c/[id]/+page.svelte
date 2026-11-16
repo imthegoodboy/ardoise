@@ -47,7 +47,7 @@
 	});
 
 	function loadQueued() {
-		const waiting = queued(data.customer.id);
+		const waiting = queued(data.shop.id, data.customer.id);
 		const ids = new Set(waiting.map((entry) => entry.id));
 		// A line that left the queue without reaching the server was rejected: drop it.
 		const onServer = new Set(data.entries.map((entry) => entry.id));
@@ -115,6 +115,7 @@
 		}
 		const entry = {
 			id: uuid(),
+			shopId: data.shop.id,
 			customerId: data.customer.id,
 			kind,
 			amountXof: amount,
@@ -191,6 +192,7 @@
 	}
 
 	let editOpen = $state(false);
+	let confirmArchive = $state(false);
 	$effect(() => {
 		if (form && 'editError' in form && form.editError) editOpen = true;
 	});
@@ -277,6 +279,9 @@
 	<noscript>
 		<form method="POST" action="?/add" class="stack nojs">
 			<h2>{t('tab.addPurchase')}</h2>
+			{#if form && 'addError' in form && form.addError}
+				<p class="note note-error" role="alert">{t('add.amountInvalid')}</p>
+			{/if}
 			<input type="hidden" name="id" value={data.newEntryId} />
 			<input type="hidden" name="kind" value="purchase" />
 			<input class="input" name="label" placeholder={t('add.labelPlaceholder')} />
@@ -474,7 +479,20 @@
 			<button class="btn btn-wide">{t('common.save')}</button>
 		</form>
 		<form method="POST" action="?/archive" class="stack" style:--stack="var(--s-2)">
-			<button class="btn btn-danger btn-wide">{t('customer.archive')}</button>
+			<!-- Two steps: a mis-tap must not hide a tab and its debt. -->
+			{#if confirmArchive}
+				<button class="btn btn-danger btn-wide">
+					{t('customer.archiveConfirm', { name: data.customer.name })}
+				</button>
+			{:else}
+				<button
+					type="button"
+					class="btn btn-quiet btn-wide"
+					onclick={() => (confirmArchive = true)}
+				>
+					{t('customer.archive')}
+				</button>
+			{/if}
 			<p class="meta">{t('customer.archiveHint')}</p>
 		</form>
 	</div>

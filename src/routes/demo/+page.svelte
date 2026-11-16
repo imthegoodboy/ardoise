@@ -17,6 +17,9 @@
 	{/if}
 	<p>{t('demo.body')}</p>
 	<p class="note">{t(`demo.wallet.${data.wallet}`)}</p>
+	{#if data.signedIn}
+		<p class="note note-error">{t('demo.signedInWarning')}</p>
+	{/if}
 	<form method="POST">
 		<button class="btn btn-wide">{t('demo.enter')}</button>
 	</form>

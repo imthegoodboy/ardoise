@@ -34,7 +34,8 @@ async function openPostgres(url: string): Promise<Db> {
 	const { default: pg } = await import('pg');
 	const pool = new pg.Pool({
 		connectionString: url,
-		max: Number(process.env.DATABASE_POOL_MAX) || 8,
+		// Serverless instances are many and short-lived: keep each one's pool small.
+		max: Number(process.env.DATABASE_POOL_MAX) || (process.env.VERCEL ? 2 : 8),
 		idleTimeoutMillis: 20_000,
 		connectionTimeoutMillis: 10_000
 	});
@@ -80,6 +81,9 @@ async function openPostgres(url: string): Promise<Db> {
 }
 
 async function openPglite(dataDir: string | undefined): Promise<Db> {
+	if (process.env.VERCEL && dataDir) {
+		throw new Error('DATABASE_URL is required on Vercel (the file system is read-only).');
+	}
 	const { PGlite } = await import('@electric-sql/pglite');
 	if (dataDir) mkdirSync(dataDir, { recursive: true });
 	const lite = dataDir ? new PGlite(dataDir) : new PGlite();

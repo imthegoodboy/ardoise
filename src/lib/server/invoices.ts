@@ -55,7 +55,7 @@ export const INVOICE_TTL_SECONDS = 15 * 60;
 /** A pending invoice for the same amount is reused while it has this long left. */
 const REUSE_MIN_LEFT_MS = 3 * 60_000;
 /** Payments that land right at expiry are still picked up for this long. */
-const GRACE_MS = 60 * 60_000;
+const GRACE_MS = 72 * 3_600_000;
 /** Polling faster than this is answered from the database. */
 const LOOKUP_GAP_MS = 2_000;
 
@@ -201,17 +201,25 @@ async function issue(args: {
 	const wallet = connection.wallet;
 	const payerName = cleanPayerName(input.payerName);
 	const db = await getDb();
+	// Who is asking (hashed): reuse is per person, never across relatives.
+	const requester = clientKey('invoice-requester', input.client);
 
 	// Pressing "pay" twice, or reloading, shows the same invoice instead of minting another.
 	const [open_] = await db.query(
 		`select * from invoices
 		 where customer_id = $1 and amount_xof = $2 and status = 'pending' and wallet_ref = $3
-		   and expires_at > $4::timestamptz
+		   and requester = $5 and expires_at > $4::timestamptz
 		 order by created_at desc limit 1`,
-		[customer.id, amountXof, connection.ref, new Date(Date.now() + REUSE_MIN_LEFT_MS).toISOString()]
+		[
+			customer.id,
+			amountXof,
+			connection.ref,
+			new Date(Date.now() + REUSE_MIN_LEFT_MS).toISOString(),
+			requester
+		]
 	);
 	if (open_) {
-		if (payerName) {
+		if (payerName && !open_.payer_name_sealed) {
 			await db.query('update invoices set payer_name_sealed = $2 where id = $1', [
 				open_.id,
 				seal(payerName, payerContext(open_.id))
@@ -228,12 +236,13 @@ async function issue(args: {
 	const perClient = await hit(clientKey('invoice-client', input.client), INVOICE_LIMITS.perClient);
 	if (!perLink.allowed || !perClient.allowed) return { ok: false, error: 'slow_down' };
 
-	// Close out a pending invoice for the same amount that is about to expire, so
-	// the new one can take its place (it stays checkable during the grace period).
+	// This requester's own invoice for the same amount, about to expire, makes way
+	// for the new one (it is still checked for payment during the grace period).
 	await db.query(
 		`update invoices set status = 'expired'
-		 where customer_id = $1 and amount_xof = $2 and wallet_ref = $3 and status = 'pending'`,
-		[customer.id, amountXof, connection.ref]
+		 where customer_id = $1 and amount_xof = $2 and wallet_ref = $3 and requester = $4
+		   and status = 'pending'`,
+		[customer.id, amountXof, connection.ref, requester]
 	);
 
 	// The fixed fallback price exists for the simulated wallet only, never for real sats.
@@ -260,8 +269,8 @@ async function issue(args: {
 		rows = await db.query(
 			`insert into invoices (id, public_id, shop_id, customer_id, amount_xof, amount_sats,
 			xof_per_btc, rate_sources, wallet_kind, bolt11, payment_hash, payer_name_sealed, expires_at,
-			wallet_ref, wallet_secret)
-		 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::timestamptz, $14, $15)
+			wallet_ref, wallet_secret, requester)
+		 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::timestamptz, $14, $15, $16)
 		 returning *`,
 			[
 				id,
@@ -278,7 +287,8 @@ async function issue(args: {
 				payerName ? seal(payerName, payerContext(id)) : null,
 				made.expiresAt.toISOString(),
 				connection.ref,
-				connection.secret ? seal(connection.secret, walletContext(id)) : null
+				connection.secret ? seal(connection.secret, walletContext(id)) : null,
+				requester
 			]
 		);
 	} catch (err) {
@@ -286,8 +296,8 @@ async function issue(args: {
 		if ((err as { code?: string }).code !== '23505') throw err;
 		const [winner] = await db.query(
 			`select id from invoices where customer_id = $1 and amount_xof = $2 and wallet_ref = $3
-			   and status = 'pending'`,
-			[customer.id, amountXof, connection.ref]
+			   and requester = $4 and status = 'pending'`,
+			[customer.id, amountXof, connection.ref, requester]
 		);
 		const existing = winner ? await getInvoiceById(winner.id) : null;
 		if (!existing) throw err;
@@ -384,21 +394,26 @@ async function walletForInvoice(invoice: Invoice, shop: Shop | null): Promise<Wa
  * Bring an invoice up to date with the wallet. Cheap to call often: lookups
  * are spaced out, and only one caller at a time does one.
  */
-export async function refreshInvoice(invoice: Invoice, shop?: Shop | null): Promise<Invoice> {
+export async function refreshInvoice(
+	invoice: Invoice,
+	shop?: Shop | null,
+	options: { force?: boolean } = {}
+): Promise<Invoice> {
 	if (invoice.status === 'paid') return invoice;
 	const now = Date.now();
-	if (now > invoice.expiresAt.getTime() + GRACE_MS) {
-		if (invoice.status === 'pending') return (await markExpired(invoice.id)) ?? invoice;
-		return invoice;
-	}
+	// Long past the grace period, an invoice that was already given one last
+	// check is left alone. A pending one is never expired without that check:
+	// the money may have arrived while nobody was watching.
+	if (now > invoice.expiresAt.getTime() + GRACE_MS && invoice.status === 'expired') return invoice;
 
 	const db = await getDb();
+	const gap = options.force ? 0 : LOOKUP_GAP_MS / 1000;
 	const claimed = await db.query(
 		`update invoices set last_checked_at = now()
 		 where id = $1 and status <> 'paid'
-		   and (last_checked_at is null or last_checked_at < now() - make_interval(secs => $2::float8))
+		   and (last_checked_at is null or last_checked_at <= now() - make_interval(secs => $2::float8))
 		 returning id`,
-		[invoice.id, LOOKUP_GAP_MS / 1000]
+		[invoice.id, gap]
 	);
 	if (!claimed.length) return (await getInvoiceById(invoice.id)) ?? invoice;
 

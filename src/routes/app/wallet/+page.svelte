@@ -59,8 +59,11 @@
 				<ul class="perms">
 					<li><Icon name="check" size={18} /> {t('wallet.perm.invoice')}</li>
 					<li><Icon name="check" size={18} /> {t('wallet.perm.lookup')}</li>
-					<li class="no"><Icon name="shield" size={18} /> {t('wallet.perm.noSpend')}</li>
+					{#if !w.faucet}
+						<li class="no"><Icon name="shield" size={18} /> {t('wallet.perm.noSpend')}</li>
+					{/if}
 				</ul>
+				{#if w.faucet}<p class="meta">{t('wallet.faucetPerms')}</p>{/if}
 			</div>
 			<form method="POST" action="?/disconnect" class="row" use:enhance>
 				{#if !data.shop.isDemo}

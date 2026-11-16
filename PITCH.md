@@ -32,7 +32,8 @@ Show the landing page; let the notebook page settle itself.
 
 1. The shop app shows **"Moussa a payé 12 550 F"** and the lines cross themselves out.
 2. Open the receipt → **Vérifier la preuve**: the browser computes SHA-256(preimage) and it matches
-   the payment hash. "Nobody has to take our word that it was paid."
+   the payment hash read from the original invoice, decoded in the browser. "Nobody has to take
+   our word that it was paid."
 
 ## 2:45 Why it is safe and real (15 s)
 

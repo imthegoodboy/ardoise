@@ -65,37 +65,61 @@ export function parseNwcUrl(raw: string): ParsedNwcUrl {
 // --- connection reuse -------------------------------------------------------
 
 const IDLE_MS = 45_000;
-const clients = new Map<string, { client: NWCClient; timer: ReturnType<typeof setTimeout> }>();
+/** A connection that answered recently is healthy: one slow call does not condemn it. */
+const HEALTHY_MS = 30_000;
 
-function drop(key: string) {
-	const entry = clients.get(key);
-	if (!entry) return;
-	clearTimeout(entry.timer);
+interface Entry {
+	client: NWCClient;
+	timer: ReturnType<typeof setTimeout>;
+	lastOk: number;
+}
+const clients = new Map<string, Entry>();
+/** Sockets being opened right now, so parallel first calls share one. */
+const opening = new Map<string, Promise<Entry>>();
+
+function drop(key: string, entry?: Entry) {
+	const current = clients.get(key);
+	if (!current || (entry && current !== entry)) return;
+	clearTimeout(current.timer);
 	clients.delete(key);
 	try {
-		entry.client.close();
+		current.client.close();
 	} catch {
 		// Closing a socket that already died is fine.
 	}
 }
 
-async function clientFor(url: string): Promise<{ key: string; client: NWCClient }> {
+async function open(url: string, key: string): Promise<Entry> {
+	// Every new socket re-checks where its relays resolve now, not where they
+	// resolved when the wallet was connected (DNS rebinding).
+	const relays = relaysOf(url);
+	if (!relays.length) throw new WalletError('bad_relay');
+	for (const relay of relays) await assertPublicRelay(relay);
+	const entry: Entry = {
+		client: new NWCClient({ nostrWalletConnectUrl: url }),
+		timer: setTimeout(() => {}),
+		lastOk: Date.now()
+	};
+	clients.set(key, entry);
+	return entry;
+}
+
+async function clientFor(url: string): Promise<{ key: string; entry: Entry }> {
 	const key = sha256Hex(url);
 	let entry = clients.get(key);
-	if (entry) {
-		clearTimeout(entry.timer);
-	} else {
-		// Every new socket re-checks where its relays resolve now, not where they
-		// resolved when the wallet was connected (DNS rebinding).
-		const relays = relaysOf(url);
-		if (!relays.length) throw new WalletError('bad_relay');
-		for (const relay of relays) await assertPublicRelay(relay);
-		entry = { client: new NWCClient({ nostrWalletConnectUrl: url }), timer: setTimeout(() => {}) };
+	if (!entry) {
+		let pending = opening.get(key);
+		if (!pending) {
+			pending = open(url, key).finally(() => opening.delete(key));
+			opening.set(key, pending);
+		}
+		entry = await pending;
 	}
-	entry.timer = setTimeout(() => drop(key), IDLE_MS);
+	clearTimeout(entry.timer);
+	const idle = entry;
+	entry.timer = setTimeout(() => drop(key, idle), IDLE_MS);
 	entry.timer.unref?.();
-	clients.set(key, entry);
-	return { key, client: entry.client };
+	return { key, entry };
 }
 
 export function closeAllNwcClients() {
@@ -118,19 +142,25 @@ async function call<T>(
 	timeoutMs: number,
 	fn: (client: NWCClient) => Promise<T>
 ): Promise<T> {
-	const { key, client } = await clientFor(url);
+	const { key, entry } = await clientFor(url);
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	try {
-		return await Promise.race([
-			fn(client),
+		const result = await Promise.race([
+			fn(entry.client),
 			new Promise<never>((_, reject) => {
 				timer = setTimeout(() => reject(new WalletError('unreachable')), timeoutMs);
 			})
 		]);
+		entry.lastOk = Date.now();
+		return result;
 	} catch (err) {
 		// A stale socket (sleeping laptop, frozen serverless instance) fails here;
-		// dropping it makes the next call start clean.
-		if (!(err instanceof Nip47WalletError)) drop(key);
+		// dropping it makes the next call start clean. A socket that answered a
+		// moment ago is kept: other lookups may be in flight on it.
+		const stale = Date.now() - entry.lastOk > HEALTHY_MS;
+		if (!(err instanceof Nip47WalletError) && (stale || !(err instanceof WalletError))) {
+			drop(key, entry);
+		}
 		throw err;
 	} finally {
 		clearTimeout(timer);

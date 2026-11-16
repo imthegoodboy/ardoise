@@ -26,8 +26,9 @@ function flag(value: string | undefined): boolean {
 export type DemoMode = 'off' | 'simulated' | 'faucet';
 
 function demoMode(value: string | undefined): DemoMode {
-	if (value === 'simulated' || value === 'faucet') return value;
-	return 'off';
+	if (value === 'simulated' || value === 'faucet' || value === 'off') return value;
+	// Unset: a fresh clone gets a working demo; production must opt in.
+	return env.NODE_ENV === 'production' ? 'off' : 'simulated';
 }
 
 export const config = {

@@ -13,7 +13,8 @@ FROM node:24-alpine
 WORKDIR /app
 ENV NODE_ENV=production \
 	PORT=3000 \
-	ARDOISE_DATA_DIR=/data
+	ARDOISE_DATA_DIR=/data \
+	BODY_SIZE_LIMIT=5M
 
 # Unprivileged user, and the only writable place is the data volume.
 RUN addgroup -S ardoise && adduser -S ardoise -G ardoise \

@@ -7,6 +7,10 @@ import { createInvoice } from '#lib/server/invoices.ts';
 import { getShop } from '#lib/server/shops.ts';
 import { cleanText } from '#lib/server/validate.ts';
 import type { Actions, PageServerLoad } from './$types';
+import type { Config } from '@sveltejs/adapter-vercel';
+
+/** On Vercel: Asking the shop's wallet for an invoice goes over Nostr relays. */
+export const config: Config = { maxDuration: 60 };
 
 /**
  * The page a relative abroad opens from WhatsApp. It shows only what they

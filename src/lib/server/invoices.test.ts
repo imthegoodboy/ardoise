@@ -72,17 +72,34 @@ describe('creating an invoice', () => {
 		expect((await getInvoice(invoice.publicId))?.id).toBe(invoice.id);
 	});
 
-	it('hands back the same invoice when pay is pressed twice', async () => {
-		const first = await invoiceFor(5000);
-		const second = await createInvoice({
-			payToken: customer.payToken,
-			amountXof: 5000,
-			payerName: 'Fatou',
-			client: client()
-		});
-		expect(second.ok && second.reused).toBe(true);
-		expect(second.ok && second.invoice.id).toBe(first.id);
+	it('hands back the same invoice when the same person presses pay twice', async () => {
+		const ask = (payerName?: string) =>
+			createInvoice({ payToken: customer.payToken, amountXof: 5000, payerName, client: 'moussa' });
+		const first = await ask();
+		const second = await ask('Fatou');
+		expect(first.ok && second.ok && second.reused).toBe(true);
+		expect(first.ok && second.ok && second.invoice.id === first.invoice.id).toBe(true);
+		// A name given on the second tap fills a blank one, never replaces a name.
 		expect(second.ok && second.invoice.payerName).toBe('Fatou');
+		const third = await ask('Someone else');
+		expect(third.ok && third.invoice.payerName).toBe('Fatou');
+	});
+
+	it('gives two relatives paying at once their own invoices', async () => {
+		const ask = (client: string, payerName: string) =>
+			createInvoice({ payToken: customer.payToken, amountXof: 5000, payerName, client });
+		const [awaSon, awaDaughter] = await Promise.all([
+			ask('paris', 'Moussa'),
+			ask('milan', 'Coumba')
+		]);
+		expect(awaSon.ok && awaDaughter.ok).toBe(true);
+		if (!awaSon.ok || !awaDaughter.ok) return;
+		expect(awaSon.invoice.id).not.toBe(awaDaughter.invoice.id);
+		expect(awaSon.invoice.payerName).toBe('Moussa');
+		expect(awaDaughter.invoice.payerName).toBe('Coumba');
+		// Both are still live: neither request expired the other's invoice.
+		expect((await getInvoice(awaSon.invoice.publicId))?.status).toBe('pending');
+		expect((await getInvoice(awaDaughter.invoice.publicId))?.status).toBe('pending');
 	});
 
 	it('refuses bad requests', async () => {
@@ -187,6 +204,25 @@ describe('settling', () => {
 		expect(outcome.settled).toBe(1);
 		expect((await getInvoice(late.publicId))?.status).toBe('paid');
 		expect((await getInvoice(never.publicId))?.status).toBe('expired');
+	});
+});
+
+describe('payments nobody was watching', () => {
+	it('are found days later: an invoice is never expired without a last check', async () => {
+		const invoice = await invoiceFor(3000, 'Moussa');
+		// Paid from abroad while every page was closed...
+		await simulatePayment(invoice.paymentHash);
+		// ...and nothing looked at it for four days.
+		await db.query(
+			`update invoices set expires_at = now() - interval '4 days', last_checked_at = null
+			 where id = $1`,
+			[invoice.id]
+		);
+		const outcome = await reconcile();
+		expect(outcome.checked).toBeGreaterThanOrEqual(1);
+		expect((await getInvoice(invoice.publicId))?.status).toBe('paid');
+		const lines = await listEntries(customer.id);
+		expect(lines.filter((line) => line.kind === 'payment_lightning')).toHaveLength(1);
 	});
 });
 

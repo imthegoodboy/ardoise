@@ -32,6 +32,7 @@
 		"@noble/curves": "^2.4.0",
 		"@noble/hashes": "^2.4.0",
 		"@scure/base": "^2.4.0",
+		"@vercel/functions": "^3.11.3",
 		"light-bolt11-decoder": "^3.2.0",
 		"pg": "^8.23.1",
 		"uqr": "^0.1.3",

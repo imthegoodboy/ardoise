@@ -1,12 +1,18 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { enhance } from '$app/forms';
 	import Icon from '#lib/components/Icon.svelte';
 	import { makeT, type MessageKey } from '#lib/i18n/index.ts';
+	import { queued } from '#lib/outbox.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 	const t = $derived(makeT(data.locale));
 	const err = (code: string) => t(`error.${code}` as MessageKey);
+
+	// Signing out wipes this phone's offline data: say so if lines are still waiting.
+	let unsent = $state(0);
+	onMount(() => (unsent = queued(data.shop.id).length));
 </script>
 
 <svelte:head>
@@ -105,6 +111,24 @@
 		</section>
 	{/if}
 
+	{#if data.archived.length}
+		<section class="stack" style:--stack="var(--s-2)">
+			<h2>{t('settings.archived')}</h2>
+			<p class="meta">{t('settings.archivedHint')}</p>
+			<ul class="archived">
+				{#each data.archived as customer (customer.id)}
+					<li>
+						<span>{customer.name}</span>
+						<form method="POST" action="?/restore" use:enhance>
+							<input type="hidden" name="customerId" value={customer.id} />
+							<button class="btn btn-plain btn-small">{t('customer.restore')}</button>
+						</form>
+					</li>
+				{/each}
+			</ul>
+		</section>
+	{/if}
+
 	<section class="stack" style:--stack="var(--s-2)">
 		<a class="btn btn-quiet" href="/app/export" download>
 			<Icon name="receipt" />
@@ -115,6 +139,9 @@
 
 	<section class="stack" style:--stack="var(--s-3)">
 		<h2>{t('settings.devices')}</h2>
+		{#if unsent}
+			<p class="note note-error small">{t('settings.unsent', { n: unsent })}</p>
+		{/if}
 		<form method="POST" action="/logout">
 			<button class="btn btn-quiet btn-wide">{t('common.logout')}</button>
 		</form>
@@ -180,6 +207,21 @@
 
 	.pin {
 		letter-spacing: 0.3em;
+	}
+
+	.archived {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		border-block-start: 1px solid var(--rule);
+	}
+
+	.archived li {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--s-2);
+		border-block-end: 1px solid var(--rule);
 	}
 
 	.danger h2 {

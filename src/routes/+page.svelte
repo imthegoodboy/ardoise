@@ -66,9 +66,14 @@
 						<a class="btn" href="/signup">{t('home.cta')}</a>
 					{/if}
 					{#if data.demoEnabled}
-						<form method="POST" action="/demo">
-							<button class="btn btn-quiet">{t('home.demo')}</button>
-						</form>
+						{#if data.signedIn}
+							<!-- Signed in: the demo page warns before switching shops. -->
+							<a class="btn btn-quiet" href="/demo">{t('home.demo')}</a>
+						{:else}
+							<form method="POST" action="/demo">
+								<button class="btn btn-quiet">{t('home.demo')}</button>
+							</form>
+						{/if}
 					{/if}
 				</div>
 				<ul class="strip rise" style:--d="360ms">
@@ -242,9 +247,14 @@
 					{data.signedIn ? t('home.continue') : t('home.cta')}
 				</a>
 				{#if data.demoEnabled}
-					<form method="POST" action="/demo">
-						<button class="btn btn-quiet">{t('home.demo')}</button>
-					</form>
+					{#if data.signedIn}
+						<!-- Signed in: the demo page warns before switching shops. -->
+						<a class="btn btn-quiet" href="/demo">{t('home.demo')}</a>
+					{:else}
+						<form method="POST" action="/demo">
+							<button class="btn btn-quiet">{t('home.demo')}</button>
+						</form>
+					{/if}
 				{/if}
 			</div>
 		</div>

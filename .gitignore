@@ -25,3 +25,7 @@ vite.config.ts.timestamp-*
 # Local databases and keys
 /.data*
 /.playwright-mcp
+
+.vercel
+.env*
+!.env.example

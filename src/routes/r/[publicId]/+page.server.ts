@@ -30,6 +30,8 @@ export const load: PageServerLoad = async ({ params }) => {
 			rateSources: invoice.rateSources,
 			paidAt: invoice.paidAt?.toISOString() ?? null,
 			paymentHash: invoice.paymentHash,
+			// The original invoice, so the browser can read the hash from it itself.
+			bolt11: invoice.bolt11,
 			preimage: invoice.status === 'paid' ? invoice.preimage : null,
 			network,
 			// Demo shops use play money even when the invoice format is mainnet (NWC faucet).

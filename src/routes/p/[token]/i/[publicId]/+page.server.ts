@@ -5,6 +5,10 @@ import { clientKey, hit } from '#lib/server/ratelimit.ts';
 import { simulatePayment } from '#lib/server/wallet/demo.ts';
 import { payWithFaucet } from '#lib/server/wallet/faucet.ts';
 import type { Actions, PageServerLoad } from './$types';
+import type { Config } from '@sveltejs/adapter-vercel';
+
+/** On Vercel: The demo faucet payment waits for settlement. */
+export const config: Config = { maxDuration: 90 };
 
 export const load: PageServerLoad = async ({ params, depends }) => {
 	depends('pay:invoice');
@@ -39,7 +43,7 @@ export const actions: Actions = {
 		let current = invoice;
 		for (let attempt = 0; attempt < 6 && current.status !== 'paid'; attempt++) {
 			if (attempt) await new Promise((resolve) => setTimeout(resolve, 1_200));
-			current = await refreshInvoice({ ...current, lastCheckedAt: null }, shop);
+			current = await refreshInvoice(current, shop, { force: true });
 		}
 		return { demoPaid: current.status === 'paid' };
 	}

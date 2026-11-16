@@ -94,6 +94,22 @@
 			<span class="hint" id="pin-hint">{t('signup.pinHint')}</span>
 		</div>
 
+		<div class="field">
+			<label for="pin2">{t('signup.pinAgain')}</label>
+			<input
+				id="pin2"
+				name="pin2"
+				class="input pin"
+				type="password"
+				required
+				inputmode="numeric"
+				autocomplete="new-password"
+				pattern={PIN_PATTERN}
+				minlength="6"
+				maxlength="6"
+			/>
+		</div>
+
 		<fieldset class="field lang">
 			<legend class="label">{t('signup.language')}</legend>
 			<label

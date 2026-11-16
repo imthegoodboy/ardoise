@@ -33,9 +33,10 @@
 	);
 	// One tap for the usual choices: everything, or a round part of it.
 	const choices = $derived(
-		due >= data.limits.min
-			? [due, ...[10_000, 5_000, 2_000].filter((value) => value < due)].slice(0, 4)
+		(due >= data.limits.min
+			? [Math.min(due, data.limits.max), ...[10_000, 5_000, 2_000].filter((value) => value < due)]
 			: [5_000, 2_000, 1_000]
+		).slice(0, 4)
 	);
 
 	function errorText(code: string): string {
@@ -128,7 +129,9 @@
 							aria-pressed={amount === choice}
 							onclick={() => (amountText = String(choice))}
 						>
-							{i === 0 && choice === due ? `${t('pay.all')} · ` : ''}{money(choice)}
+							{i === 0 && choice === due && due <= data.limits.max
+								? `${t('pay.all')} · `
+								: ''}{money(choice)}
 						</button>
 					{/each}
 				</div>

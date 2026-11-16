@@ -21,11 +21,12 @@ gets a receipt with a cryptographic proof of payment.
 
 ## Try it
 
-|                      |                                                                             |
-| -------------------- | --------------------------------------------------------------------------- |
-| One command          | `docker compose up --build` → <http://localhost:3000> → **Essayer la démo** |
-| Without Docker       | `npm install && npm run dev` → <http://localhost:5173>                      |
-| 3-minute demo script | [PITCH.md](PITCH.md)                                                        |
+|                      |                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------- |
+| Live                 | **<https://ardoise-dakar.vercel.app>** → **Essayer la démo** / **Try the demo** |
+| One command          | `docker compose up --build` → <http://localhost:3000>                           |
+| Without Docker       | `npm install && npm run dev` → <http://localhost:5173>                          |
+| 3-minute demo script | [PITCH.md](PITCH.md) · demo video and slides in [`submission/`](submission/)    |
 
 The demo creates a **private sandbox shop for each visitor** (Boutique Diallo, Médina) with seven
 realistic tabs. In the default `faucet` mode its wallet is a real NWC wallet from
@@ -76,8 +77,9 @@ diaspora families. A pilot of 50 shops in two Dakar neighbourhoods would reach ~
 - The tab's open lines, the amount due in FCFA and in euros, one-tap amount choices
 - An invoice from the shop's own wallet as a QR code, a `lightning:` link, a copy button, and a
   one-tap **WebLN** button when a browser wallet (Alby…) is present
-- A receipt with amount, rate, payment hash and preimage, and a **Verify** button that recomputes
-  `SHA-256(preimage) = payment hash` in the browser
+- A receipt with amount, rate, payment hash and preimage, and a **Verify** button that decodes the
+  original BOLT11 invoice in the browser and checks `SHA-256(preimage)` against the payment hash
+  inside it, without trusting the server
 
 ## Architecture
 
@@ -134,14 +136,14 @@ More detail: [ARCHITECTURE.md](ARCHITECTURE.md) · Security: [THREAT_MODEL.md](T
 
 ## Constraints and how they are met
 
-| Constraint       | Answer                                                                                                                                                            |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Low bandwidth    | Payer page ≈ **84 KB** on first visit (HTML 7 KB, JS 49 KB, CSS 3 KB, fonts 24 KB), SVG QR codes, no images; photos shrunk to 1 600 px on the phone before upload |
-| Mid-range phones | 48 px touch targets, Atkinson Hyperlegible for figures read in sunlight, no heavy framework UI                                                                    |
-| Patchy network   | Offline outbox with idempotent entry ids, service worker for the book, payment detection that survives the payer closing the page                                 |
-| Volatility       | Amount fixed in sats for 15 minutes; the shop decides when to convert                                                                                             |
-| FCFA             | Fixed peg to the euro (655.957), formatted the way people write it (`12 500 F`)                                                                                   |
-| Trust            | Receive-only wallet, preimage receipts anyone can verify, open source                                                                                             |
+| Constraint       | Answer                                                                                                                                                                                                                                                                                                       |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Low bandwidth    | Payer page ≈ **84 KB** on first visit (HTML 7 KB, JS 49 KB, CSS 3 KB, fonts 24 KB), SVG QR codes, no images; photos shrunk to 1 600 px on the phone before upload                                                                                                                                            |
+| Mid-range phones | 48 px touch targets, Atkinson Hyperlegible for figures read in sunlight, no heavy framework UI                                                                                                                                                                                                               |
+| Patchy network   | Offline outbox with idempotent entry ids, service worker for the book, payments made while every page was closed are still found: each invoice is checked for 72 hours, never expired without a last check, by any traffic, the cron and the shop's next visit (which also announces what arrived meanwhile) |
+| Volatility       | Amount fixed in sats for 15 minutes; the shop decides when to convert                                                                                                                                                                                                                                        |
+| FCFA             | Fixed peg to the euro (655.957), formatted the way people write it (`12 500 F`)                                                                                                                                                                                                                              |
+| Trust            | Receive-only wallet, preimage receipts anyone can verify, open source                                                                                                                                                                                                                                        |
 
 ## Metrics
 
@@ -160,7 +162,7 @@ More detail: [ARCHITECTURE.md](ARCHITECTURE.md) · Security: [THREAT_MODEL.md](T
 
 ```sh
 npm install
-npm run dev            # http://localhost:5173, embedded Postgres in ./.data, demo enabled by .env
+npm run dev            # http://localhost:5173, embedded Postgres in ./.data, simulated demo by default
 npm test               # unit and integration tests (in-memory Postgres)
 npm run test:nwc       # live test against faucet.nwc.dev over public Nostr relays
 npm run verify         # lint + types + tests + production build

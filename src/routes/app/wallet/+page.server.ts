@@ -1,6 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import { confirmPin } from '#lib/server/auth.ts';
-import { config } from '#lib/server/config.ts';
+import { config as settings } from '#lib/server/config.ts';
 import { describeError, log } from '#lib/server/log.ts';
 import { clientKey, hit } from '#lib/server/ratelimit.ts';
 import { clearWallet, getShop, setWallet, walletSecret } from '#lib/server/shops.ts';
@@ -8,13 +8,17 @@ import { cleanText } from '#lib/server/validate.ts';
 import { inspectNwc } from '#lib/server/wallet/nwc.ts';
 import { WalletError } from '#lib/server/wallet/types.ts';
 import type { Actions, PageServerLoad } from './$types';
+import type { Config } from '@sveltejs/adapter-vercel';
+
+/** On Vercel: Testing a wallet means a round trip over Nostr relays. */
+export const config: Config = { maxDuration: 60 };
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const shop = (await getShop(locals.shop!.id))!;
 	let faucet = false;
 	if (shop.walletKind === 'nwc' && shop.isDemo) {
 		faucet =
-			(await walletSecret(shop.id))?.includes('getalby.com') === true && config.demo === 'faucet';
+			(await walletSecret(shop.id))?.includes('getalby.com') === true && settings.demo === 'faucet';
 	}
 	return {
 		wallet: {

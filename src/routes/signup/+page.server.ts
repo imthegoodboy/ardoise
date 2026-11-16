@@ -16,10 +16,13 @@ export const actions: Actions = {
 		const place = cleanText(form.get('place'), 60);
 		const phone = cleanText(form.get('phone'), 30);
 		const pin = cleanText(form.get('pin'), 12);
+		const pinAgain = cleanText(form.get('pin2'), 12);
 		const locale = form.get('locale') === 'en' ? 'en' : 'fr';
 		const values = { name, place, phone, locale };
 
 		if (!name) return fail(400, { ...values, error: 'name_required' as const });
+		// One typo in a PIN nobody can recover would lock the shop out of its own book.
+		if (pin !== pinAgain) return fail(400, { ...values, error: 'pin_mismatch' as const });
 		const result = await signUp({
 			name,
 			place,

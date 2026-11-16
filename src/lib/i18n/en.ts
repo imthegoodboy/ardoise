@@ -1,7 +1,6 @@
 import type { MessageKey } from './fr.ts';
 
 export const en: Record<MessageKey, string> = {
-	'app.name': 'Ardoise',
 	'app.tagline': 'The corner-shop credit book',
 
 	'nav.book': 'Book',
@@ -12,9 +11,7 @@ export const en: Record<MessageKey, string> = {
 
 	'common.back': 'Back',
 	'common.close': 'Close',
-	'common.cancel': 'Cancel',
 	'common.save': 'Save',
-	'common.copy': 'Copy',
 	'common.copied': 'Copied',
 	'common.login': 'Sign in',
 	'common.logout': 'Sign out',
@@ -24,7 +21,6 @@ export const en: Record<MessageKey, string> = {
 	'common.optional': 'optional',
 	'common.offline': 'No network. What you write down will be sent when the connection is back.',
 	'common.queued': '{n} line(s) waiting to be sent',
-	'common.today': 'today',
 	'common.notFound': 'Page not found',
 	'common.home': 'Home',
 
@@ -115,6 +111,7 @@ export const en: Record<MessageKey, string> = {
 	'signup.language': 'Language',
 	'signup.submit': 'Open my book',
 	'signup.haveAccount': 'Already have a book?',
+	'signup.pinAgain': 'The same code again',
 
 	'login.title': 'Open my book',
 	'login.phone': 'Phone number',
@@ -133,6 +130,7 @@ export const en: Record<MessageKey, string> = {
 	'error.locked': 'Too many attempts. Try again in {minutes} min.',
 	'error.pin_wrong': 'Wrong secret code.',
 	'error.limit_invalid': 'The limit must be an amount in francs, for example 20 000.',
+	'error.pin_mismatch': 'The two codes are not the same.',
 
 	'book.title': 'Book',
 	'book.owed': 'Owed to you',
@@ -168,8 +166,8 @@ export const en: Record<MessageKey, string> = {
 		'It is wired to a real test Lightning wallet, reached through Nostr Wallet Connect over public relays, with play-money sats.',
 	'demo.wallet.real': 'It is wired to a real Lightning wallet: payments are real sats.',
 	'demo.enter': 'Enter the shop',
-	'demo.off': 'The demo is not enabled on this server.',
 	'demo.expires': 'Demo shop, erased after 24 hours.',
+	'demo.signedInWarning': 'You are signed in to your shop. Entering the demo signs you out of it.',
 
 	'customer.new.title': 'New customer',
 	'customer.edit.title': 'Edit customer',
@@ -183,7 +181,8 @@ export const en: Record<MessageKey, string> = {
 	'customer.archive': 'Remove from the book',
 	'customer.archiveHint':
 		'Their payment link will stop working. The history is kept in the export.',
-	'customer.saved': 'Saved.',
+	'customer.archiveConfirm': 'Yes, remove {name} from the book',
+	'customer.restore': 'Put back in the book',
 
 	'tab.owes': 'Owes',
 	'tab.ahead': 'In credit',
@@ -201,7 +200,6 @@ export const en: Record<MessageKey, string> = {
 	'tab.pending': 'waiting to send',
 	'tab.voided': 'crossed out',
 	'tab.waiting': 'Payment in progress: {amount}',
-	'tab.call': 'Call',
 	'tab.edit': 'Edit',
 	'tab.lines': 'Lines on the tab',
 
@@ -225,7 +223,6 @@ export const en: Record<MessageKey, string> = {
 	'add.overLimit': 'Careful: this customer will go over their {limit} limit.',
 	'add.queued': 'No network: the line will be sent when the connection is back.',
 	'add.cashLabel': 'Cash',
-	'add.clear': 'Clear',
 
 	'share.title': 'Send the tab',
 	'share.message':
@@ -283,6 +280,8 @@ export const en: Record<MessageKey, string> = {
 	'wallet.why': 'Why “receive only”?',
 	'wallet.whyBody':
 		'A key that can spend has no business on a server. If someone stole Ardoise’s database, they would find nothing to spend.',
+	'wallet.faucetPerms':
+		'Test wallet: it can also spend its play-money sats. A real wallet connected here could not.',
 
 	'settings.title': 'Settings',
 	'settings.shop': 'Your shop',
@@ -303,6 +302,9 @@ export const en: Record<MessageKey, string> = {
 	'settings.privacy': 'Your data',
 	'settings.privacyBody':
 		'Your customers’ names and numbers are encrypted. Your own number is only kept as a fingerprint. Nothing is sold or shared.',
+	'settings.archived': 'Removed customers',
+	'settings.archivedHint': 'Their history is kept. Put them back in the book at any time.',
+	'settings.unsent': '{n} line(s) not sent yet will be lost if you sign out now.',
 
 	'import.title': 'Import a notebook page',
 	'import.lead':
@@ -330,9 +332,9 @@ export const en: Record<MessageKey, string> = {
 	'import.tooBig': 'Photo too large. Try again.',
 	'import.another': 'Import another page',
 	'import.saveFailed': 'These lines could not be added. Check the amounts and try again.',
+	'import.date': 'Date',
 
 	'pay.title': '{name}’s tab',
-	'pay.at': 'at {shop}',
 	'pay.due': 'Left to pay',
 	'pay.nothingDue': 'Nothing to pay right now. Thank you!',
 	'pay.ahead': '{amount} paid ahead',
@@ -358,6 +360,9 @@ export const en: Record<MessageKey, string> = {
 	'pay.error.not_found': 'This link no longer works. Ask the shop for the new one.',
 	'pay.notFoundTitle': 'Link not found',
 	'pay.since': 'since {date}',
+	'pay.gone.title': 'This link was replaced',
+	'pay.gone.body':
+		'The shop created a new link for this tab, or removed it from the book. Ask the shop for the new link.',
 
 	'invoice.title': 'Scan to pay',
 	'invoice.open': 'Open in my wallet',
@@ -384,6 +389,8 @@ export const en: Record<MessageKey, string> = {
 		'Demo: invoice from an NWC test wallet, payable only with the faucet’s play-money sats.',
 	'invoice.back': 'Back to the tab',
 	'invoice.qrLabel': 'Lightning invoice QR code',
+	'invoice.gone':
+		'This payment link no longer works. If you already paid, the shop has the money: ask them for the new link.',
 
 	'receipt.title': 'Payment receipt',
 	'receipt.shop': 'Shop',
@@ -403,5 +410,6 @@ export const en: Record<MessageKey, string> = {
 	'receipt.print': 'Print',
 	'receipt.demo': 'Demo receipt: paid with test sats.',
 	'receipt.notPaid': 'This payment is not confirmed yet.',
+	'receipt.fromInvoice': 'Fingerprint read from the Lightning invoice itself',
 	'receipt.network': 'Network'
 };
