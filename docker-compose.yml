@@ -8,6 +8,7 @@ services:
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: ardoise
+      # Letters, digits, - and _ only: it is also embedded in DATABASE_URL below.
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ardoise-local}
       POSTGRES_DB: ardoise
     volumes:
@@ -24,7 +25,8 @@ services:
       - '${PORT:-3000}:3000'
     environment:
       DATABASE_URL: postgres://ardoise:${POSTGRES_PASSWORD:-ardoise-local}@db:5432/ardoise
-      ORIGIN: ${ORIGIN:-http://localhost:3000}
+      # Follows PORT unless set explicitly (e.g. behind a domain).
+      ORIGIN: ${ORIGIN:-http://localhost:${PORT:-3000}}
       # Without ARDOISE_SECRET, a random key is generated on first start and kept
       # in the `data` volume below, never in this file.
       ARDOISE_SECRET: ${ARDOISE_SECRET:-}
